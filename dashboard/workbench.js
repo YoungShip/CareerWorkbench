@@ -6,6 +6,8 @@
  const btn=(text,fn,cls='btn')=>{const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;};
  const empty=(host,text)=>host.append(el('p',text,'empty'));
  const tag=(text,kind='')=>el('span',text,'tag '+kind);
+ const eventTitle=event=>String(event.event_type||'').replace(/\s*\[时间口径：(准确截止|估算截止|时间未知|固定安排)\]/g,'').trim();
+ const timingTag=timing=>tag(timing.kind,timing.kind==='估算截止'?'warning':timing.kind==='时间未知'?'neutral':'');
  const jobs=()=>snapshot?.tables.job_pool||[];
  const events=()=>snapshot?.tables.follow_up||[];
  const today=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Shanghai'});
@@ -59,8 +61,12 @@
   const unknown=pending.filter(e=>!TodoRules.timing(e).at);
   for(const event of [...upcoming,...older,...unknown].slice(0,5)){
    const row=el('div',undefined,'action-row'),main=el('div',undefined,'row-main'),timing=TodoRules.timing(event);
-   main.append(el('strong',event.company+' · '+event.event_type),el('p',timing.at||'时间待确认'));
-   row.append(main,btn(timing.kind,()=>navigate('schedule'),'text-button'));$('action-list').append(row);
+   const heading=el('div',undefined,'action-heading'),title=el('p',eventTitle(event),'action-title'),meta=el('div',undefined,'action-meta');
+   title.title=event.event_type;
+   heading.append(el('strong',event.company),timingTag(timing));
+   const moment=M.timingParts(timing.at);
+   meta.append(el('span',moment.day?[moment.day,moment.clock].filter(Boolean).join(' '):'时间待确认','event-date'),btn('查看安排 →',()=>navigate('schedule'),'text-button'));
+   main.append(heading,title,meta);row.append(main);$('action-list').append(row);
   }
   if(!pending.length)empty($('action-list'),'目前没有未完成事项。');
   $('week-list').replaceChildren();
@@ -70,7 +76,13 @@
    const row=el('div',undefined,'week-day'),label=el('div',undefined,'day-date'),items=el('div');
    label.append(el('strong',date.slice(8)),el('span',n===0?'今天':d.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',weekday:'short'})));
    const assigned=events().filter(e=>!TodoRules.done(e)&&M.timingParts(TodoRules.timing(e).at).day===date);
-   for(const event of assigned){const t=TodoRules.timing(event),clock=M.timingParts(t.at).clock;items.append(el('div',event.company+' · '+event.event_type+' · '+t.kind+(clock?' '+clock:''),'day-event'));}
+   for(const event of assigned){
+    const timing=TodoRules.timing(event),clock=M.timingParts(timing.at).clock,entry=el('div',undefined,'day-event'),heading=el('div',undefined,'day-event-heading'),title=el('p',eventTitle(event),'day-event-title');
+    title.title=event.event_type;heading.append(el('strong',event.company),el('span',clock||'未注明时刻','event-date'));
+    entry.append(heading,title,el('span',timing.kind,'day-event-kind'));items.append(entry);
+   }
+   if(assigned.length)row.classList.add('has-events');
+   if(n===0)row.classList.add('is-today');
    if(!assigned.length)items.append(el('span','暂无安排','muted'));
    row.append(label,items);$('week-list').append(row);
   }
