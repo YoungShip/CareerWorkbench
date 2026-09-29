@@ -1,0 +1,34 @@
+[project]
+name = "jobmatch"
+version = "0.1.0"
+description = "岗位匹配 Agent：LangGraph 编排、混合检索、校验器驱动的自我纠错与离线评测"
+authors = [{ name = "YoungShip" }]
+requires-python = ">=3.12"
+dependencies = [
+    "faiss-cpu>=1.15.1",
+    "fastembed>=0.8.1",
+    "jieba>=0.42.1",
+    "langgraph>=1.2.12",
+    "langsmith>=0.14.1",
+    "numpy>=2.5.3",
+    "openai>=3.19.2",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.13.5",
+    "rank-bm25>=0.2.2",
+]
+
+[project.scripts]
+jobmatch = "jobmatch.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:invalid escape sequence:SyntaxWarning"]

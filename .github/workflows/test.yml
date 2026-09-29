@@ -1,0 +1,50 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: CareerWorkbench
+      - uses: actions/checkout@v4
+        with:
+          repository: YoungShip/job-application-workflow-skills
+          ref: 20e2dc587f5116dd6b46f7a30bba75cc957b649c
+          path: workflow-skills
+      - name: Install the pinned matching validator
+        run: |
+          mkdir -p .agents
+          cp -R workflow-skills/skills .agents/skills
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.13'
+      - name: Install Python
+        run: uv python install 3.12
+      - name: Set the shared Python interpreter
+        run: echo "JOBHUNT_PYTHON=$(uv python find 3.12)" >> "$GITHUB_ENV"
+      - name: Node tests
+        working-directory: CareerWorkbench
+        run: |
+          npm ci
+          npm test
+      - name: Agent tests with fictional data and fake models
+        working-directory: CareerWorkbench/agent
+        run: |
+          uv sync --frozen
+          uv run --frozen python -X utf8 -m pytest -q
+      - name: Built wheel demo without private files or network
+        working-directory: CareerWorkbench/agent
+        run: |
+          uv build --wheel --offline --out-dir ../tmp/demo-dist
+          uv run --frozen python -X utf8 ../scripts/verify-agent-demo.py --wheel-dir ../tmp/demo-dist --out ../tmp/demo-packaged

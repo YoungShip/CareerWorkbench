@@ -1,0 +1,50 @@
+my-materials/
+.DS_Store
+Thumbs.db
+
+# --- 个人数据（勿提交到公开仓库）---
+# 这些是本机私有派生资料（最初由上游模板生成，模板已于 2026-09-27 移除），只属于本机这一份私有工作副本。
+candidate_profile.json
+application_rules.md
+resume_routing.md
+answer_bank.md
+experience_bank.md
+
+# 看板个人数据已取消 Git 跟踪；仅模板保留在版本库。
+dashboard/*.csv
+
+# --- 本机工作文件 ---
+.workbuddy/
+
+# Transaction backups contain personal records
+dashboard/.store/
+
+# Persistent private business data: never commit
+data/*
+!data/README.md
+# Local runtime artifacts and dependencies
+node_modules/
+logs/
+tmp/
+*.log
+
+# Python runtimes, caches and local configuration
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.env
+.env.*
+dist/
+build/
+
+# One-off, company-specific research builders stay local
+scripts/build-dahua-matching-20260914.js
+scripts/research-dahua-20260914.js
+
+# Machine-specific scheduled task export
+dashboard/* Dashboard.xml
+
+# Local synthetic demo outputs
+demo-output/

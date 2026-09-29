@@ -1,0 +1,2 @@
+# Demo input digests bind exact UTF-8 bytes on Windows and Linux.
+agent/src/jobmatch/resources/demo/* -text

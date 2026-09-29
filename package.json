@@ -1,0 +1,16 @@
+{
+  "name": "career-workbench",
+  "private": true,
+  "description": "Local job application tracker, discovery CLI and MCP server",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "mcp": "node mcp/server.js",
+    "test": "node --test dashboard/*.test.js discovery/*.test.js scripts/*.test.js mcp/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "ws": "^8.21.3",
+    "zod": "^3.25.0"
+  }
+}

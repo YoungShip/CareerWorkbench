@@ -1,0 +1,22 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),cp=require('node:child_process');
+const {createStore}=require('./store'),rules=require('./todo');
+test('shared event is single, queues both jobs and exports completion to both without changing other jobs',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jobhunt-shared-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const store=createStore(dir);store.initialize({job_pool:['a','b','c'].map(job_id=>({job_id,company:'Same',job_title:job_id,status:'Submitted'}))});
+ const apply=operations=>store.commit({expected_revision:store.snapshot().revision,operations});
+ apply([{type:'event.add',job_id:'a',event_id:'event',record:{date:'2026-09-17',event_type:'共享测评',related_job_ids:'["b"]',stage:'1',stage_status:'1'}}]);
+ let s=store.snapshot();assert.equal(s.tables.follow_up.length,1);assert.deepEqual(s.tables.sync_queue.map(q=>q.job_id).sort(),['a','b']);
+ const file=path.join(dir,'export.json');const exportSync=()=>{cp.execFileSync(process.execPath,[path.join(__dirname,'tracker-cli.js'),'sync-export',file],{env:{...process.env,JOBHUNT_DATA_DIR:dir}});return JSON.parse(fs.readFileSync(file)).entries;};
+ assert.equal(exportSync().filter(e=>e.events[0].event_id==='event').length,2);
+ assert.deepEqual(JSON.parse(fs.readFileSync(file)).identity_index.map(j=>j.job_id),['a','b','c']);
+ const beforeRevision=s.revision;
+ for(const related of ['["a"]','["b","b"]','["missing"]','{}'])assert.throws(()=>apply([{type:'event.patch',job_id:'a',event_id:'event',record:{date:'2026-09-17',event_type:'共享测评',related_job_ids:related}}]));
+ assert.equal(store.snapshot().revision,beforeRevision);
+ assert.throws(()=>apply([{type:'job.delete',job_id:'b',reason:'test'}]));
+ apply(rules.completion(s,{job_id:'a',event_id:'event',date:'2026-09-12',outcome:'6',evidence:'测试本人确认'}));
+ s=store.snapshot();assert.equal(rules.sorted(s.tables.follow_up).length,0);assert.equal(s.tables.follow_up.length,1);
+ for(const id of ['a','b'])assert.match(s.tables.job_pool.find(j=>j.job_id===id).next_action,/等待结果/);
+ assert.equal(s.tables.job_pool.find(j=>j.job_id==='c').next_action,'');
+ assert.ok(exportSync().every(e=>e.events[0].stage_status==='6'));
+ assert.throws(()=>store.commit({expected_revision:beforeRevision,operations:[]}));
+});

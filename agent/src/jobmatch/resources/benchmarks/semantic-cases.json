@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "kind": "synthetic",
+    "author": "assistant",
+    "scope": "虚构 JD 与虚构候选事实，用于边界回归；不代表真实用户能力金标。",
+    "user_confirmed": false
+  },
+  "cases": [
+    {
+      "id": "unfinished-project-not-global-negation",
+      "title": "量产算法工程师",
+      "jd": "有算法在产品量产中落地的经历。",
+      "evidence": [
+        {"id": "project", "kind": "项目", "text": "[项目] 项目甲处于原型阶段，尚未完成量产。"},
+        {"id": "limit", "kind": "边界", "text": "[边界] 只提供了项目甲的阶段记录，没有提供其他项目量产证明，也没有声明本人从来没有其他量产经历。"}
+      ],
+      "assertions": [
+        {"jd_contains": "量产", "conclusions": ["pending"]}
+      ],
+      "decisions": ["pending", "consider"],
+      "rationale": "特定项目未完成不能推出候选人全部经历均不满足；无直接量产证据时保留待核对。"
+    },
+    {
+      "id": "expected-graduation",
+      "title": "2027届校园招聘软件工程师",
+      "jd": "招聘项目：2027届校园招聘\n学历：硕士及以上，2027年应届毕业。\n能力要求：有 Python 接口开发经验。",
+      "evidence": [
+        {"id": "edu", "kind": "教育", "text": "[教育] 测试大学计算机硕士研究生，2024年入学，目前在读，预计2027年6月毕业。"},
+        {"id": "py", "kind": "项目", "text": "[项目] 开发 Python 接口并完成接口测试。"}
+      ],
+      "assertions": [
+        {"jd_contains": "硕士及以上", "conclusions": ["satisfied"], "supports": ["direct_support"], "categories": ["hard_qualification"]}
+      ],
+      "decisions": ["recommended"],
+      "rationale": "校招该届预计毕业层次满足，不得描述为已取得学位。"
+    },
+    {
+      "id": "phd-required",
+      "title": "研究工程师",
+      "jd": "学历硬性要求：博士研究生。\n有 Python 开发经验。",
+      "evidence": [
+        {"id": "edu", "kind": "教育", "text": "[教育] 最高学历为硕士研究生，预计2027年毕业；无博士经历。"},
+        {"id": "py", "kind": "项目", "text": "[项目] 完成 Python 开发与测试。"}
+      ],
+      "assertions": [
+        {"jd_contains": "博士研究生", "conclusions": ["not_satisfied"], "supports": ["conflict"], "categories": ["hard_qualification"]}
+      ],
+      "decisions": ["excluded"],
+      "rationale": "明确博士门槛与最高硕士事实冲突。"
+    },
+    {
+      "id": "related-major-unknown",
+      "title": "软件工程师",
+      "jd": "专业要求：计算机相关专业。\n有 Python 开发经验。",
+      "evidence": [
+        {"id": "edu", "kind": "教育", "text": "[教育] 自动化专业硕士；未提供该公司的相关专业认定目录。"},
+        {"id": "py", "kind": "项目", "text": "[项目] 完成 Python 开发与测试。"}
+      ],
+      "assertions": [
+        {"jd_contains": "计算机相关专业", "conclusions": ["pending"], "categories": ["hard_qualification", "ambiguous"]}
+      ],
+      "decisions": ["pending"],
+      "rationale": "自动化是否属于该公司认可的相关专业，缺少官方认定依据。"
+    },
+    {
+      "id": "course-not-proficiency",
+      "title": "数据库工程师",
+      "jd": "熟练掌握 Redis 集群部署与故障排查。",
+      "evidence": [
+        {"id": "course", "kind": "教育", "text": "[课程] 数据库课介绍过 Redis 的基本概念。"},
+        {"id": "limit", "kind": "边界", "text": "[边界] Redis 仅课程接触，未提供集群部署或生产故障排查证据。"}
+      ],
+      "assertions": [
+        {"jd_contains": "熟练掌握 Redis", "conclusions": ["pending"], "supports": ["transferable", "no_evidence", "conflict"]}
+      ],
+      "decisions": ["consider", "pending"],
+      "rationale": "课程证据不能升级成熟练；缺证据也不应断言明确不满足。"
+    },
+    {
+      "id": "ai-not-independent-handwriting",
+      "title": "算法工程师",
+      "jd": "必须有完全由本人独立手写策略算法的项目经历，不接受仅依赖 AI 生成代码的经历。",
+      "evidence": [
+        {"id": "project", "kind": "项目", "text": "[项目] 本人提出需求并运行测试，策略算法代码仅由 AI 生成。"},
+        {"id": "limit", "kind": "边界", "text": "[边界] 当前没有本人独立手写策略算法的经历，不能把 AI 代码称为本人独立手写。"}
+      ],
+      "assertions": [
+        {"jd_contains": "完全由本人独立手写", "conclusions": ["not_satisfied"], "supports": ["conflict"]}
+      ],
+      "decisions": ["excluded"],
+      "rationale": "这里只因 JD 明确要求独立手写且存在相反事实排除，不能泛化为所有 AI 辅助项目。"
+    },
+    {
+      "id": "ai-assisted-ownership",
+      "title": "工作流工程师",
+      "jd": "负责系统规则设计、跨模块联调与验收。",
+      "evidence": [
+        {"id": "project", "kind": "项目", "text": "[项目] 本人定义系统规则、设计模块接口、定位联调故障并完成验收；实现代码使用 AI 辅助。"},
+        {"id": "limit", "kind": "边界", "text": "[边界] 不声称全部代码由本人独立手写；规则设计、联调及验收确由本人完成。"}
+      ],
+      "assertions": [
+        {"jd_contains": "规则设计", "conclusions": ["satisfied"], "supports": ["direct_support"]}
+      ],
+      "decisions": ["recommended"],
+      "rationale": "AI 辅助代码不抹去有事实支持的设计、联调和验收责任。"
+    },
+    {
+      "id": "absent-evidence",
+      "title": "容器工程师",
+      "jd": "熟悉 Kubernetes 运维。",
+      "evidence": [
+        {"id": "py", "kind": "项目", "text": "[项目] 完成 Python 本地数据脚本。"}
+      ],
+      "assertions": [
+        {"jd_contains": "Kubernetes", "conclusions": ["pending"], "supports": ["no_evidence"]}
+      ],
+      "decisions": ["pending"],
+      "rationale": "没有 Kubernetes 证据应保留未知，不能虚构支持或断言本人不会。"
+    },
+    {
+      "id": "cohort-conflict",
+      "title": "2027届校园招聘开发工程师",
+      "jd": "仅接受2026届毕业生。\n具有 Python 接口开发经验。",
+      "evidence": [
+        {"id": "edu", "kind": "教育", "text": "[教育] 在读硕士，预计2027年6月毕业。"},
+        {"id": "py", "kind": "项目", "text": "[项目] 完成 Python 接口开发和测试。"}
+      ],
+      "assertions": [
+        {"jd_contains": "2026届", "conclusions": ["pending"]}
+      ],
+      "decisions": ["pending"],
+      "rationale": "岗位标题与正文届别矛盾，须核对招聘方，不能私自选取有利版本。"
+    },
+    {
+      "id": "phd-is-only-plus",
+      "title": "2027届校招软件工程师",
+      "jd": "硕士及以上，2027届应届毕业生。\n博士优先。\n有 Python 开发经验。",
+      "evidence": [
+        {"id": "edu", "kind": "教育", "text": "[教育] 在读计算机硕士，预计2027年6月毕业，没有博士经历。"},
+        {"id": "py", "kind": "项目", "text": "[项目] 完成 Python 开发和测试。"}
+      ],
+      "assertions": [
+        {"jd_contains": "博士优先", "categories": ["plus"], "conclusions": ["not_satisfied", "pending"]},
+        {"jd_contains": "硕士及以上", "categories": ["hard_qualification"], "conclusions": ["satisfied"]}
+      ],
+      "decisions": ["recommended"],
+      "rationale": "不满足博士加分项不应推翻已满足的硬条件和核心能力。"
+    }
+  ]
+}

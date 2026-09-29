@@ -1,0 +1,108 @@
+{
+  "kind": "synthetic_scripted_demo",
+  "chunks": [
+    {
+      "id": "e_python",
+      "kind": "项目",
+      "text": "[项目] 虚构候选人完成Python接口开发和接口测试。",
+      "source": "synthetic-demo"
+    },
+    {
+      "id": "e_redis",
+      "kind": "教育",
+      "text": "[课程] 虚构候选人在课程中接触Redis基本概念。",
+      "source": "synthetic-demo"
+    },
+    {
+      "id": "e_boundary",
+      "kind": "边界",
+      "text": "[边界] Redis只有课程基础，缺少集群部署和故障排查的实践记录。",
+      "source": "synthetic-demo"
+    }
+  ],
+  "responses": {
+    "演示Python接口岗": [
+      {
+        "requirements": [
+          {
+            "text": "具有Python接口开发经验。",
+            "category": "core_capability",
+            "jd_lines": [
+              1
+            ],
+            "category_basis_lines": [
+              1
+            ]
+          }
+        ],
+        "ignored_lines": []
+      },
+      {
+        "tool_query": "Python 接口"
+      },
+      {
+        "judgments": [
+          {
+            "requirement_id": "R1",
+            "support": "direct_support",
+            "conclusion": "satisfied",
+            "evidence_ids": [
+              "missing-id"
+            ],
+            "judgment": "故意使用不存在的证据ID，展示校验纠错。",
+            "unverified_aspects": []
+          }
+        ]
+      },
+      {
+        "judgments": [
+          {
+            "requirement_id": "R1",
+            "support": "direct_support",
+            "conclusion": "satisfied",
+            "evidence_ids": [
+              "e_python"
+            ],
+            "judgment": "虚构项目直接支持Python接口开发。",
+            "unverified_aspects": []
+          }
+        ]
+      }
+    ],
+    "演示Redis工程岗": [
+      {
+        "requirements": [
+          {
+            "text": "能够独立部署Redis集群并排查故障。",
+            "category": "core_capability",
+            "jd_lines": [
+              1
+            ],
+            "category_basis_lines": [
+              1
+            ]
+          }
+        ],
+        "ignored_lines": []
+      },
+      {
+        "judgments": [
+          {
+            "requirement_id": "R1",
+            "support": "transferable",
+            "conclusion": "pending",
+            "evidence_ids": [
+              "e_redis",
+              "e_boundary"
+            ],
+            "judgment": "课程基础可迁移，但独立部署与排障尚无证据。",
+            "unverified_aspects": [
+              "独立部署Redis集群",
+              "排查Redis故障"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

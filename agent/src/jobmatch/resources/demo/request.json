@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "company": "示例公司（完全虚构）",
+  "scope": "两个虚构岗位的程序演示，不作实际求职建议。",
+  "coverage": {
+    "capture_status": "partial",
+    "note": "虚构资料，未抓取官网，也未取得人工完整性确认。"
+  },
+  "raw_catalog": {
+    "file": "catalog.json",
+    "sha256": "080c7db32e1802ee18043bc224a83bb761cc67892475a606117cc13cad8c39bf",
+    "format": "json",
+    "records_path": "/records",
+    "id_path": "/id",
+    "total_positions": 2
+  },
+  "catalog_index": [
+    {
+      "id": "demo-python",
+      "title": "演示Python接口岗",
+      "city": "演示城市",
+      "in_scope": true
+    },
+    {
+      "id": "demo-redis",
+      "title": "演示Redis工程岗",
+      "city": "演示城市",
+      "in_scope": true
+    }
+  ],
+  "jd_sources": [
+    {
+      "position_id": "demo-python",
+      "file": "python-jd.txt",
+      "sha256": "a23e17570a6e6692ff825dc319fe4c655d7c72060da3a2a28276bbfd3976a2ec",
+      "url": "https://example.invalid/jobs/python",
+      "read_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "position_id": "demo-redis",
+      "file": "redis-jd.txt",
+      "sha256": "57b641a16336b6798ce71fbb3069bbf5264d84bf98b12334704a1ab0ec62997f",
+      "url": "https://example.invalid/jobs/redis",
+      "read_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/YoungShip/job-application-workflow-skills",
+  "revision": "8f080f466f0917937b65f0bc50c929ed6c2e22ea",
+  "scope": "仅独立离线演示的固定发布依赖；生产仍使用工作区配置的Skill。",
+  "normalization": "UTF-8文本仅规范CRLF为LF",
+  "files": {
+    "verify-matching.py": "46ceec8662e5f42f6853dc9be41511d4fd62b378d6a22c3e2b480caedf90c483",
+    "assemble-matching-summary.py": "6941f9d6f1aa4dca75cb8770fe8574cb6be7f7cbdc2dc2d37c31a5045a285285",
+    "derive_matching_display.py": "667c1a6351d9f754579db83b8c01aaa93737d589a476106c206f9fa4fadb38c6",
+    "run-matching-pipeline.py": "3bf0a82e45b6bac86e79070c820b58e5ec7704ca290ccd62208784d7e8aa07a1"
+  }
+}
