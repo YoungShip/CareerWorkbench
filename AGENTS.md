@@ -6,6 +6,8 @@
 
 2026-09-13 本人批准迁移：`D:/AppData/Documents/resume/CareerWorkbench/dashboard/` 的 CSV 为唯一投递主数据。原 Excel 仅保留历史备份，不再回写；OfferNotes 为同步视图。
 
+2026-09-30 本人确认统一简历版本：当前按岗位方向使用标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用；央国企、银行和研究所同样按岗位方向选 A/C，不再维护或选择独立国企版。历史投递所用版本、材料快照和日志保留原样；新申请只从母表当前附件索引取文件。
+
 ## 0. 硬触发：涉及浏览器或网页时，先读技能再动任何东西
 
 触发范围：OfferNotes、网申站点、任何要打开或操作网页的任务。第一步固定为读 `D:/AppData/Documents/resume/.agents/skills/offernotes-sync/SKILL.md` 及其 `references/sync-knowledge.md`，**先于**探测端口、启动进程或宣称能力边界。
