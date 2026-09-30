@@ -115,3 +115,49 @@ def test_full_context_sends_each_evidence_only_once(corpus, tmp_path):
     assert payload["always_include_boundary_ids"] == ["limit"]
     assert payload["job_context"]["title"] == "2027届校招工程师"
     assert payload["job_context"]["city"] == "Fixture City"
+
+
+def test_existing_but_unseen_evidence_is_rejected_and_repaired(corpus, tmp_path):
+    match, client = matcher(corpus, [extraction(), judgment("robot"), judgment()])
+    out = tmp_path / "run"
+    result = match.run(Job("role", "Fixture", "Developer", "需要 Python。"), out)
+    payload = json.loads(client.requests[1][0][1]["content"])
+    assert "robot" not in {item["id"] for item in payload["evidence"]}
+    assert result["verification_passed"] and result["decision"] == "recommended"
+    assert not result["first_passed"] and result["repairs"] == 1
+    assert "CANDIDATE_EVIDENCE_REFERENCE_UNKNOWN" in result["attempts"][0]["codes"]
+
+
+def test_tool_results_make_new_evidence_available_for_citation(corpus, tmp_path):
+    from jobmatch.corpus import Chunk, Corpus
+
+    corpus = Corpus([Chunk("python", "项目", "开发 Python 接口。", "fixture"),
+        Chunk("robot", "项目", "使用 Python 开发机器人状态采集。", "fixture"),
+        Chunk("limit", "边界", "不把接口开发扩写为模型训练。", "fixture")])
+
+    class ScopedRetriever:
+        mode = "bm25"
+        def search(self, query):
+            return [corpus.get("robot" if query == "机器人" else "python")]
+        def boundaries(self):
+            return [corpus.get("limit")]
+
+    client = FakeLLM([extraction(), tool("机器人"), judgment("robot")])
+    match = Matcher(client, ScopedRetriever(), corpus, default_paths().matching_scripts)
+    out = tmp_path / "run"
+    result = match.run(Job("role", "Fixture", "Developer", "需要 Python。"), out)
+    payload = json.loads(client.requests[1][0][1]["content"])
+    assert "robot" not in {item["id"] for item in payload["evidence"]}
+    assert result["verification_passed"] and result["first_passed"]
+    assert result["searches"] == 1 and result["repairs"] == 0
+    tool_result = json.loads(client.requests[2][0][-1]["content"])
+    assert "robot" in {item["id"] for item in tool_result["evidence"]}
+
+
+def test_repair_cannot_guess_existing_but_unseen_evidence(corpus, tmp_path):
+    match, _ = matcher(corpus, [extraction(), judgment("invented"), judgment("robot")], max_repairs=1)
+    out = tmp_path / "run"
+    result = match.run(Job("role", "Fixture", "Developer", "需要 Python。"), out)
+    assert not result["verification_passed"] and result["decision"] is None
+    assert len(result["attempts"]) == 2
+    assert all("CANDIDATE_EVIDENCE_REFERENCE_UNKNOWN" in item["codes"] for item in result["attempts"])

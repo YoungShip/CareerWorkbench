@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import tempfile
 import threading
 from pathlib import Path
 from typing import Protocol
@@ -82,10 +83,19 @@ class Retriever:
                 vectors = unit_vectors(embedder.documents([c.text for c in corpus.chunks]))
                 if cache:
                     cache.parent.mkdir(parents=True, exist_ok=True)
-                    temp = cache.with_suffix(".tmp")
-                    with temp.open("wb") as fh:
-                        np.save(fh, vectors, allow_pickle=False)
-                    temp.replace(cache)
+                    # 每个写入者拥有独立临时文件；关闭后原子替换，不共享固定 .tmp 路径。
+                    temp = None
+                    try:
+                        with tempfile.NamedTemporaryFile(dir=cache.parent, prefix=cache.name + ".",
+                                                         suffix=".tmp", delete=False) as fh:
+                            temp = Path(fh.name)
+                            np.save(fh, vectors, allow_pickle=False)
+                            fh.flush()
+                            os.fsync(fh.fileno())
+                        temp.replace(cache)
+                    finally:
+                        if temp is not None:
+                            temp.unlink(missing_ok=True)
             if len(vectors) != len(corpus.chunks):
                 raise ValueError("向量缓存与证据库条数不一致")
             self.index = faiss.IndexFlatIP(vectors.shape[1])

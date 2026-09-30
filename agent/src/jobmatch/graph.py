@@ -27,6 +27,7 @@ class State(TypedDict, total=False):
     judgments: list[dict]
     messages: list[dict]
     pending_tools: list[dict]
+    visible_evidence_ids: list[str]
     searches: int
     repairs: int
     passed: bool
@@ -110,8 +111,10 @@ class Matcher:
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
             {"role": "user", "content": output_instruction(Judgments)},
         ]
-        self.trace("retrieve", evidence_ids=results, unique_evidence_count=len(evidence), variant=self.retriever.mode)
-        return {"messages": messages}
+        visible_ids = sorted(evidence)
+        self.trace("retrieve", evidence_ids=results, unique_evidence_count=len(evidence), variant=self.retriever.mode,
+                   visible_evidence_ids=visible_ids)
+        return {"messages": messages, "visible_evidence_ids": visible_ids}
 
     def judge(self, state):
         choice = "auto" if state["searches"] < self.max_searches and self.retriever.mode != "full" else "none"
@@ -140,6 +143,7 @@ class Matcher:
 
     def search_tools(self, state):
         used, messages = state["searches"], list(state["messages"])
+        visible_ids = set(state["visible_evidence_ids"])
         for call in state["pending_tools"]:
             try:
                 fn = call.get("function", {})
@@ -154,16 +158,19 @@ class Matcher:
                 used += 1
                 hits = self.retriever.search(redact(query))
                 result = {"evidence": [asdict(c) for c in hits]}
+                visible_ids.update(c.id for c in hits)
             except (ValueError, TypeError):
                 result = {"error": "工具名、参数无效或已达上限；请以现有证据返回最终 JSON"}
                 # 错误调用也消耗额度，避免不断调用不存在的工具。
                 used = min(used + 1, self.max_searches)
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result, ensure_ascii=False)})
             self.trace("search", result=result, searches=used)
-        return {"messages": messages, "searches": used, "pending_tools": []}
+        return {"messages": messages, "searches": used, "pending_tools": [],
+                "visible_evidence_ids": sorted(visible_ids)}
 
     def decide(self, state):
-        raw = build_record(self.job, state["clauses"], state["requirements"], state["judgments"], self.corpus, self.scripts)
+        raw = build_record(self.job, state["clauses"], state["requirements"], state["judgments"], self.corpus, self.scripts,
+                           visible_evidence_ids=state["visible_evidence_ids"])
         write_json(self.directory / f"attempt-{state['repairs']}-raw.json", raw)
         return {"record": assembled(raw, self.scripts)}
 
@@ -212,7 +219,8 @@ class Matcher:
         try:
             state = self.graph.invoke({}, {"recursion_limit": 40})
             final = self.directory / "matching-raw.json"
-            write_json(final, build_record(job, state["clauses"], state["requirements"], state["judgments"], self.corpus, self.scripts))
+            write_json(final, build_record(job, state["clauses"], state["requirements"], state["judgments"], self.corpus,
+                                          self.scripts, visible_evidence_ids=state["visible_evidence_ids"]))
             passed = state["passed"]
             if official_pipeline:
                 pipeline = publish(final, self.scripts, directory / "pipeline")

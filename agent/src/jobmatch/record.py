@@ -48,7 +48,8 @@ def prepare_snapshots(directory: Path, job: Job, clauses: list[str], corpus: Cor
     write_json(directory / "catalog.json", {"records": [{"id": job.id, "title": redact(job.title)}]})
 
 
-def build_record(job: Job, clauses: list[str], requirements: list[dict], judgments: list[dict], corpus: Corpus, scripts_dir=None) -> dict:
+def build_record(job: Job, clauses: list[str], requirements: list[dict], judgments: list[dict], corpus: Corpus,
+                 scripts_dir=None, *, visible_evidence_ids=None) -> dict:
     normal = load_verifier(scripts_dir).normalize
     line_ids, quotes, seen = {}, {}, {}
     for n, line in enumerate(clauses, 1):
@@ -78,11 +79,12 @@ def build_record(job: Job, clauses: list[str], requirements: list[dict], judgmen
         })
     decision = derive_decision(entries)
     evidence = []
+    visible = set(visible_evidence_ids) if visible_evidence_ids is not None else None
     for chunk in corpus.chunks:
-        if chunk.id in used_evidence:
+        if chunk.id in used_evidence and (visible is None or chunk.id in visible):
             line = corpus.line_of(chunk.id)
             evidence.append({"id": chunk.id, "text": chunk.text, "locator": {"line_start": line, "line_end": line}})
-    # 未知 evidence_ids 留在 requirements 中，由校验器拒绝，不静默修饰模型输出。
+    # 未知或尚未展示给模型的 ID 留在 requirements 中，由校验器拒绝；不修饰原始判断。
     stamp = datetime.now(timezone.utc).isoformat()
     position = {
         "id": job.id, "title": redact(job.title), "city": redact(job.city or "未标注"),

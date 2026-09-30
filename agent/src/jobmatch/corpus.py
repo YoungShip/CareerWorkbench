@@ -176,6 +176,8 @@ def _profile_facts(profile: dict, source: str) -> list[Chunk]:
             facts.append(f"第 {item['发明人排序']} 发明人（共 {item.get('发明人总人数', '?')} 人）")
         if item.get("公开日期"):
             facts.append(f"公开日期 {item['公开日期']}")
+        if item.get("实际分工说明"):
+            facts.append(f"实际分工说明：{item['实际分工说明']}")
         text = f"[成果] {item.get('类型', '成果')}《{item['名称']}》：{'；'.join(f for f in facts if f)}"
         chunks.append(Chunk(f"ip_{n}", "成果", _clean(text), f"{source}#学术成果"))
     thesis = profile.get("硕士课题") or {}

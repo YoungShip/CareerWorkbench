@@ -41,6 +41,20 @@ def test_jd_cleaning_keeps_requirements_and_nested_numbers():
     assert "5-1. 熟悉 Python。" in split_clauses(text)
 
 
+def test_patent_order_does_not_hide_candidate_reported_work(tmp_path):
+    profile = {"学术成果": [{"名称": "合成专利", "类型": "发明专利", "状态": "已公开、尚未授权",
+        "发明人排序": 2, "发明人总人数": 5,
+        "实际分工说明": "本人说明：实际工作由本人完成，导师按署名安排列第一。"}]}
+    source, rules = tmp_path / "profile.json", tmp_path / "rules.md"
+    source.write_text(json.dumps(profile, ensure_ascii=False), encoding="utf-8")
+    rules.write_text("## 经历与表述边界\n- 正式署名按公开顺序填写。\n", encoding="utf-8")
+    corpus = build_corpus(source, rules)
+    patent = corpus.get("ip_1")
+    assert "第 2 发明人（共 5 人）" in patent.text
+    assert "本人说明：实际工作由本人完成" in patent.text
+    assert "已公开、尚未授权" in patent.text
+
+
 def test_missing_key_is_explicit_and_config_repr_hides_key(tmp_path, monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(ModelError, match="未配置模型 Key"):

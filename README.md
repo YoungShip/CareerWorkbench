@@ -14,6 +14,7 @@
 | 运行一个无需密钥或个人资料的例子 | 下方快速开始、[离线演示](agent/DEMO.md) |
 | Agent 如何调用工具、校验和纠错 | [执行流程与边界](agent/README.md#流程与边界)、[核心流程代码](agent/src/jobmatch/graph.py) |
 | 为什么小语料默认全量上下文 | [50 岗 × 4 组评测](agent/EVAL.md)、[检索实现](agent/src/jobmatch/retrieval.py) |
+| 当前架构选择做过哪些对比 | [受控架构与检索核验](agent/OPTIMALITY.md) |
 | 如何检查语义错误与恢复中断 | [成对语义回归](agent/QUALITY.md)、[检查点恢复](agent/RECOVERY.md) |
 | 如何防止未经预览或基于旧版本的写入 | [MCP 预览令牌](references/mcp-server.md)、[事务主表](references/local-tracker.md) |
 
