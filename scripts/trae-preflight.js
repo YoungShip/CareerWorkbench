@@ -90,6 +90,13 @@ file('discovery-state',path.join(project,'data','company-discovery','leads.json'
 file('matching-validator',path.join(skills,'campus-recruitment','scripts','verify-matching.py'));
 invoke('python',python,['--version']);
 invoke('tracker-validate',process.execPath,[path.join(project,'dashboard','tracker-cli.js'),'validate']);
+// 声明了个人母表的实际工作区才核对材料；独立源码演示不需要个人资料。
+const canonicalProfile=path.join(workspace,'lapis-cv','秋招','网申档案.json');
+if(fs.existsSync(canonicalProfile)){
+ const agentPython=process.platform==='win32'?path.join(project,'agent','.venv','Scripts','python.exe'):path.join(project,'agent','.venv','bin','python');
+ invoke('materials-consistency',fs.existsSync(agentPython)?agentPython:python,[path.join(project,'scripts','check-workspace-materials.py')],
+  s=>({status:s.status,project_count:s.project_count,resumes:s.resumes?.map(r=>({variant:r.variant,project_ids:r.project_ids,pages:r.pages})),errors:s.errors,warnings:s.warnings}));
+}
 // query 内部仍读取并校验完整状态，只投影一条，避免大型历史 snapshot 撑爆 stdout 缓冲区。
 invoke('discovery-validated-query',process.execPath,[path.join(project,'discovery','cli.js'),'query','--fields=lead_id,company,state','--limit=1'],s=>({revision:s.revision,active_run_id:s.active_run_id||null,leads:s.counts.total}));
 invoke('site-knowledge-status',process.execPath,[path.join(project,'scripts','site-knowledge-status.js'),'--json'],s=>({summary:s.summary,attention:s.entries?.filter(e=>e.freshness!=='fresh').map(e=>({file:e.file,status:e.knowledge_status,freshness:e.freshness}))||[]}));

@@ -72,7 +72,7 @@ function createToolHandlers(options={}){
    tokens.verify(preview_token,plan);
    const result=store.commit(plan);
    const readback=result.changed_jobs.length?store.query({job_ids:result.changed_jobs,fields:readbackFields(plan)}):null;
-   return {...result,readback,sync:'改动已进入 sync_queue（pending），线上 OfferNotes 尚未同步，需按 offernotes-sync 处理'};
+   return {...result,readback,sync:result.changed_jobs.length?'改动已进入 sync_queue（pending），线上 OfferNotes 尚未同步，需按 offernotes-sync 处理':'本次未改变岗位记录，未新增岗位同步项；既有队列状态仍以完整核查为准'};
   }
  };
 }

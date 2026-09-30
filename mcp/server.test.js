@@ -10,6 +10,16 @@ const {createStore}=require('../dashboard/store');
 const {createServer}=require('./server');
 const {canonical}=require('./tools');
 
+test('auxiliary-only writes do not claim that jobs entered the sync queue',()=>{
+ const {createToolHandlers}=require('./tools');
+ const service={store:{commit:()=>({changed_jobs:[],counts:{resume_rules:1}})}};
+ const handlers=createToolHandlers({service,tokens:{verify(){}}});
+ const result=handlers.apply({plan:{operations:[{type:'table.upsert',table:'resume_rules'}]},preview_token:'fixture'});
+ assert.equal(result.readback,null);
+ assert.match(result.sync,/未新增岗位同步项/);
+ assert.doesNotMatch(result.sync,/已进入 sync_queue/);
+});
+
 function fixture(t){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'jobhunt-mcp-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
  const dataDir=path.join(dir,'dashboard');fs.mkdirSync(dataDir);

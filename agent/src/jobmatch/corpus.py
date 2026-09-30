@@ -89,6 +89,8 @@ def _education(items: list[dict], source: str) -> list[Chunk]:
             facts.append("全日制")
         if e.get("学制"):
             facts.append(f"学制{e['学制']}")
+        if e.get("研究方向"):
+            facts.append(f"研究方向：{e['研究方向']}")
         if e.get("GPA成绩") is not None:
             facts.append(f"GPA {e['GPA成绩']}（{e.get('GPA类型') or '分制未注明'}）")
         if e.get("成绩排名"):

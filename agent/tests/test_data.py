@@ -18,7 +18,7 @@ def test_profile_whitelist_and_negative_evidence(tmp_path):
         "基本信息": {"移动电话": mobile, "电子邮箱": "private@example.invalid", "证件号码": identity},
         "家庭成员": [{"姓名": "不能流出"}],
         "教育经历": [{"id": "edu", "学历": "硕士研究生", "学校": "测试大学", "专业": "计算机", "开始": "2024", "结束": "2027",
-                    "学位名称": "硕士", "学位说明": "在读，尚未毕业", "日期状态": "常规暂用值"}],
+                    "学位名称": "硕士", "学位说明": "在读，尚未毕业", "日期状态": "常规暂用值", "研究方向": "合成机器人学习课题"}],
         "工作经历": [{"id": "hidden", "公司": "不默认公司", "是否默认填写": False, "描述": "不该出现"}],
         "项目经历": [{"id": "project", "名称": "开发工具", "描述": "完成接口开发。联系 abc@example.invalid",
             "边界": "AI 辅助实现，不称独立手写。"}],
@@ -29,6 +29,7 @@ def test_profile_whitelist_and_negative_evidence(tmp_path):
     corpus = build_corpus(p, m)
     assert "课程接触" in corpus.snapshot and "AI 辅助" in corpus.snapshot
     assert "在读，尚未毕业" in corpus.snapshot and "常规暂用值" in corpus.snapshot and "专利未授权" in corpus.snapshot
+    assert "研究方向：合成机器人学习课题" in corpus.snapshot
     for forbidden in (mobile, identity, "private@example.invalid", "abc@example.invalid", "不该出现", "不能流出", "不得进入语料"):
         assert forbidden not in corpus.snapshot
 

@@ -24,7 +24,8 @@ JD 正文和白名单经历证据会发送给配置的模型服务商；电话�
 
 以下命令均在 agent 目录执行：
 
-- uv run jobmatch doctor：配置与标注数量检查，只返回是否配置，不输出密钥。
+- uv run jobmatch doctor：检查配置、标注数量和母表/简历/生成资料一致性，不输出密钥；未就绪返回非零。
+- uv run jobmatch check-materials：只读核对结构化项目、简历文字和生成资料；--matching-file 可检查旧结果的冻结证据是否仍适用。
 - uv run jobmatch corpus：读取最新母表，生成带版本的私有证据库。
 - uv run jobmatch match --jd-file JD.txt --company 测试公司 --title Python开发 --city 苏州 --variant hybrid：单岗匹配。
 - uv run jobmatch match --job-id 已有岗位ID --variant bm25：只读主表里该岗的 JD。
@@ -68,7 +69,7 @@ LangGraph 节点：prepare → extract → retrieve → judge ↔ search_tools �
 - research 通过 tracker rules 冻结当前选岗规则，规则审阅仍交回 Skill。原始目录、每岗 JD 和观察引文先查 ID 与哈希再调用模型；保留抓取时间与模型处理时间，失败岗不会被写成 excluded。公司记录省略 selected_position_id，研究结果不自动登记。
 - 测试和代码存在不等于本人已经熟练掌握。面试需要用真实案例解释设计、定位代码并完成小修改。
 
-当前执行器、检索方式、引用可见性与并发缓存的受控比较见 [OPTIMALITY.md](OPTIMALITY.md)。语料抽取同时保留正式专利排序与母表的实际分工说明；母表未收录的已确认项目可通过本机 extra-evidence.md 补充，并保留来源。
+当前执行器、检索方式、引用可见性与并发缓存的受控比较见 [OPTIMALITY.md](OPTIMALITY.md)。语料抽取同时保留正式专利排序、实际分工、研究方向与阶段进展。正式简历项目先归入母表，生成资料并通过 [资料链路检查](../references/materials-consistency.md)；补充证据仅承接有来源的额外事实，不代替结构化项目目录。
 
 ## 产物
 

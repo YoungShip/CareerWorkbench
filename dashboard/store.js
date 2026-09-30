@@ -32,7 +32,7 @@ function parseCSV(text) {
  return {header,rows:rows.filter(r=>r.length!==1||r[0]!=='').map(r=>{if(r.length!==header.length)fail('CSV column count mismatch');return Object.fromEntries(header.map((k,i)=>[k,r[i]]));})};
 }
 function csv(table) {return [table.header,...table.rows.map(r=>table.header.map(k=>r[k]??''))].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n')+'\r\n';}
-function atomic(file, content) {const temp=file+'.tmp-'+crypto.randomUUID();fs.writeFileSync(temp,content);fs.renameSync(temp,file);}
+function atomic(file, content) {const temp=file+'.tmp-'+crypto.randomUUID();try{fs.writeFileSync(temp,content);fs.renameSync(temp,file);}catch(error){try{if(fs.existsSync(temp))fs.unlinkSync(temp);}catch{}throw error;}}
 function id(prefix){return prefix+'_'+crypto.randomUUID();}
 
 // 登记相关的元数据字段：只用于本次校验与留痕，不是 job_pool 的列，
@@ -116,7 +116,13 @@ function createStore(root=__dirname,options={}) {
  function recover(){
   if(!fs.existsSync(journal))return;
   const j=JSON.parse(fs.readFileSync(journal,'utf8'));
-  for(const name of TABLES){const p=path.join(j.backup,name+'.csv');if(fs.existsSync(p))atomic(path.join(root,name+'.csv'),fs.readFileSync(p));else if(fs.existsSync(path.join(root,name+'.csv')))fs.unlinkSync(path.join(root,name+'.csv'));}
+  for(const name of TABLES){
+   const p=path.join(j.backup,name+'.csv'),target=path.join(root,name+'.csv');
+   if(fs.existsSync(p)){
+    const content=fs.readFileSync(p);
+    if(!fs.existsSync(target)||!fs.readFileSync(target).equals(content))atomic(target,content);
+   }else if(fs.existsSync(target))fs.unlinkSync(target);
+  }
   fs.unlinkSync(journal);
  }
  function raw(){const state={};for(const name of TABLES){const p=path.join(root,name+'.csv');state[name]=fs.existsSync(p)?parseCSV(fs.readFileSync(p,'utf8')):{header:HEADERS[name]||[],rows:[]};}return state;}
@@ -129,11 +135,11 @@ function createStore(root=__dirname,options={}) {
   for(const r of s.follow_up.rows){for(const linked of eventJobIds(r)){const target=jobs.find(j=>j.job_id===linked);if(!target)fail('Unknown shared job_id');if(target.company!==jobs.find(j=>j.job_id===r.job_id).company)fail('Shared event must link jobs in the same company');}if(r.date&&!validDate(r.date))fail('Invalid event date');if(r.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time))fail('Invalid event time');if(r.stage&&!/^[0-5]$/.test(r.stage))fail('Invalid stage');if(r.stage_status&&!/^[1-6]$/.test(r.stage_status))fail('Invalid stage status');}
  }
  function save(s,oldRevision){
-  validate(s);if(revision(raw())!==oldRevision)fail('Files changed outside the store; reload before writing',409);
+  validate(s);const previous=raw();if(revision(previous)!==oldRevision)fail('Files changed outside the store; reload before writing',409);
   const backup=path.join(internal,'backups',new Date().toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomUUID());fs.mkdirSync(backup,{recursive:true});
   for(const n of TABLES){const p=path.join(root,n+'.csv');if(fs.existsSync(p))fs.copyFileSync(p,path.join(backup,n+'.csv'));}
   atomic(journal,JSON.stringify({backup}));
-  try{for(const n of TABLES)atomic(path.join(root,n+'.csv'),csv(s[n]));const reread=raw();validate(reread);if(revision(reread)!==revision(s))fail('Write verification failed');fs.unlinkSync(journal);}catch(e){recover();throw e;}
+  try{for(const n of TABLES){const target=path.join(root,n+'.csv');if(!fs.existsSync(target)||csv(previous[n])!==csv(s[n]))atomic(target,csv(s[n]));}const reread=raw();validate(reread);if(revision(reread)!==revision(s))fail('Write verification failed');fs.unlinkSync(journal);}catch(e){recover();throw e;}
   return {revision:revision(s),backup};
  }
  function warnings(s){
@@ -241,7 +247,7 @@ function createStore(root=__dirname,options={}) {
    changes.add(job.job_id);
   }
   for(const jobId of changes){const q={job_id:jobId,change_id:id('change'),state:'pending',updated_at:new Date().toISOString(),synced_at:'',error:''};const i=s.sync_queue.rows.findIndex(r=>r.job_id===jobId);if(i<0)s.sync_queue.rows.push(q);else s.sync_queue.rows[i]=q;}
-  summary(s);validate(s);
+  if((plan.operations||[]).some(op=>op.type!=='table.upsert'))summary(s);validate(s);
   const result={changed_jobs:[...changes],counts:Object.fromEntries(TABLES.map(n=>[n,s[n].rows.length])),warnings:warnings(s)};
   if(dryRun)return {...result,expected_revision:before,preview:(plan.operations||[])};
   return {...result,...save(s,before)};

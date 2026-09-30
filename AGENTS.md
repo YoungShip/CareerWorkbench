@@ -8,6 +8,8 @@
 
 2026-09-30 本人确认统一简历版本：当前按岗位方向使用标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用；央国企、银行和研究所同样按岗位方向选 A/C，不再维护或选择独立国企版。历史投递所用版本、材料快照和日志保留原样；新申请只从母表当前附件索引取文件。
 
+2026-10-01 资料更新闭环：新增或修改简历中的项目，必须同步母表结构化项目及对应网申文本组，运行 lapis-cv/scripts/generate_application_materials.py，再通过 jobmatch check-materials；不得只改 PDF 或自我介绍。候选资料、经历库、回答库与申请规则为生成视图，实际匹配在资料未同步时停止并提示修复；旧匹配结果按冻结证据版本复核，历史投递不改写。
+
 ## 0. 硬触发：涉及浏览器或网页时，先读技能再动任何东西
 
 触发范围：OfferNotes、网申站点、任何要打开或操作网页的任务。第一步固定为读 `D:/AppData/Documents/resume/.agents/skills/offernotes-sync/SKILL.md` 及其 `references/sync-knowledge.md`，**先于**探测端口、启动进程或宣称能力边界。

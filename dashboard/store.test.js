@@ -51,6 +51,34 @@ test('same-title positions warn without merging; remote identities remain unique
 test('submission needs evidence; calendar additions preserve existing records and stable links',t=>{const {store}=fixture(t);let snap=store.snapshot();assert.throws(()=>store.commit({expected_revision:snap.revision,operations:[{type:'job.patch',job_id:'j1',patch:{status:'Submitted'}}]}),/evidence/);store.commit({expected_revision:snap.revision,operations:[{type:'job.patch',job_id:'j1',patch:{status:'Submitted',application_date:'2026-09-13'}},{type:'log.add',job_id:'j1',log_id:'l1',record:{status:'Submitted',submission_evidence:'User confirmed',job_description:'Full JD'}}]});for(const n of [1,2])store.commit({expected_revision:store.snapshot().revision,operations:[{type:'event.add',job_id:'j1',event_id:'e'+n,record:{date:'2026-09-15',time:'17:10',event_type:'Test '+n}}]});store.commit({expected_revision:store.snapshot().revision,operations:[{type:'job.patch',job_id:'j1',patch:{job_title:'Renamed'}}]});snap=store.snapshot();assert.equal(snap.tables.follow_up.length,2);assert.equal(snap.tables.application_log[0].job_description,'Full JD');assert.equal(snap.tables.follow_up[0].job_title,'Renamed');assert.equal(snap.tables.sync_queue.length,1);assert.equal(snap.tables.sync_queue[0].state,'pending');});
 test('preview makes no changes; reinitialization and invalid dates rejected',t=>{const {store}=fixture(t);const snap=store.snapshot();store.commit({expected_revision:snap.revision,operations:[{type:'job.patch',job_id:'j1',patch:{notes:'preview only'}}]},true);assert.equal(store.snapshot().revision,snap.revision);assert.throws(()=>store.initialize({}),/Already migrated/);assert.throws(()=>store.commit({expected_revision:snap.revision,operations:[{type:'event.add',job_id:'j1',record:{date:'2026-02-30',event_type:'Invalid'}}]}),/date/);});
 test('unfinished transaction rolls back from backup on next read',t=>{const {dir,store}=fixture(t);const snap=store.snapshot();store.commit({expected_revision:snap.revision,operations:[{type:'job.patch',job_id:'j1',patch:{notes:'committed'}}]});const committed=store.snapshot();const backup=path.join(dir,'.store','test-backup');fs.mkdirSync(backup);for(const name of fs.readdirSync(dir).filter(n=>n.endsWith('.csv')))fs.copyFileSync(path.join(dir,name),path.join(backup,name));fs.writeFileSync(path.join(dir,'.store','journal.json'),JSON.stringify({backup}));fs.writeFileSync(path.join(dir,'job_pool.csv'),'broken');assert.equal(store.snapshot().revision,committed.revision);});
+test('auxiliary update leaves unchanged locked tables untouched',t=>{
+ const {dir,store}=fixture(t),before=store.snapshot(),daily=path.join(dir,'daily_dashboard.csv'),content=fs.readFileSync(daily);
+ const rename=fs.renameSync;
+ fs.renameSync=(from,to)=>{if(to===daily)throw Object.assign(new Error('Fixture sharing lock'),{code:'EPERM'});return rename(from,to);};
+ try{
+  const result=store.commit({expected_revision:before.revision,operations:[{type:'table.upsert',table:'resume_rules',match:{role_family:'AI'},record:{notes:'Canonical project is available'}}]});
+  assert.deepEqual(result.changed_jobs,[]);
+  assert.equal(store.snapshot().tables.resume_rules[0].notes,'Canonical project is available');
+  assert.ok(fs.readFileSync(daily).equals(content));
+ }finally{fs.renameSync=rename;}
+});
+test('recovery skips byte-identical locked files while restoring changed tables',t=>{
+ const {dir,store}=fixture(t),before=store.snapshot(),backup=path.join(dir,'.store','locked-recovery-backup');fs.mkdirSync(backup);
+ for(const name of fs.readdirSync(dir).filter(n=>n.endsWith('.csv')))fs.copyFileSync(path.join(dir,name),path.join(backup,name));
+ fs.writeFileSync(path.join(dir,'.store','journal.json'),JSON.stringify({backup}));fs.writeFileSync(path.join(dir,'job_pool.csv'),'broken');
+ const daily=path.join(dir,'daily_dashboard.csv'),rename=fs.renameSync;
+ fs.renameSync=(from,to)=>{if(to===daily)throw Object.assign(new Error('Fixture sharing lock'),{code:'EPERM'});return rename(from,to);};
+ try{assert.deepEqual(store.snapshot(),before);assert.equal(fs.existsSync(path.join(dir,'.store','journal.json')),false);}finally{fs.renameSync=rename;}
+});
+test('failed file replacement rolls back without leaving private CSV temporaries',t=>{
+ const {dir,store}=fixture(t),before=store.snapshot(),target=path.join(dir,'resume_rules.csv'),rename=fs.renameSync;
+ fs.renameSync=(from,to)=>{if(to===target)throw Object.assign(new Error('Fixture sharing lock'),{code:'EPERM'});return rename(from,to);};
+ try{
+  assert.throws(()=>store.commit({expected_revision:before.revision,operations:[{type:'table.upsert',table:'resume_rules',match:{role_family:'AI'},record:{notes:'Blocked write'}}]}),/Fixture sharing lock/);
+  assert.deepEqual(store.snapshot(),before);
+  assert.equal(fs.readdirSync(dir).some(name=>name.includes('.csv.tmp-')),false);
+ }finally{fs.renameSync=rename;}
+});
 test('live lock prevents overlapping writers and stale sync acknowledgments fail',t=>{const {dir,store}=fixture(t);const lock=path.join(dir,'.store','lock');fs.mkdirSync(lock);fs.writeFileSync(path.join(lock,'owner.json'),JSON.stringify({pid:process.pid}));assert.throws(()=>store.snapshot(),/Another process/);fs.rmSync(lock,{recursive:true});store.commit({expected_revision:store.snapshot().revision,operations:[{type:'job.patch',job_id:'j1',patch:{notes:'queued'}}]});assert.throws(()=>store.commit({expected_revision:store.snapshot().revision,operations:[{type:'sync.ack',job_id:'j1',change_id:'stale'}]}),/stale/);});
 
 // ---- 新研究岗位登记许可（对应审阅第三节的调用方约束）----

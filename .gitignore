@@ -12,6 +12,7 @@ experience_bank.md
 
 # 看板个人数据已取消 Git 跟踪；仅模板保留在版本库。
 dashboard/*.csv
+dashboard/*.csv.tmp-*
 
 # --- 本机工作文件 ---
 .workbuddy/
@@ -27,6 +28,7 @@ node_modules/
 logs/
 tmp/
 *.log
+*.workflow-view.tmp-*
 
 # Python runtimes, caches and local configuration
 .venv/

@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: YoungShip/job-application-workflow-skills
-          ref: 20e2dc587f5116dd6b46f7a30bba75cc957b649c
+          ref: 29884e3de5a3d617a9c507aa7cc24ed2de883ac4
           path: workflow-skills
       - name: Install the pinned matching validator
         run: |

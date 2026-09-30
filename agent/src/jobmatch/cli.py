@@ -79,6 +79,8 @@ def run_name(prefix: str) -> str:
 
 def current_corpus(paths):
     from .corpus import build_corpus
+    from .materials import require_consistent_materials
+    require_consistent_materials(paths.profile_json, paths.project)
     return build_corpus(paths.profile_json, paths.profile_md, paths.extra_evidence)
 
 
@@ -93,9 +95,27 @@ def cmd_doctor(args):
         model = {"configured": False}
     sheet = paths.eval_dir / "标注表-50岗.xlsx"
     labels = read_labels(sheet) if sheet.is_file() else {}
+    from .materials import inspect_materials
+    materials = inspect_materials(paths.profile_json, paths.project)
+    ready = model["configured"] and paths.profile_json.is_file() and (paths.matching_scripts / "verify-matching.py").is_file() and materials["status"] == "passed"
     print(json.dumps({"model": model, "manual_labels": len(labels), "annotation_sheet": str(sheet),
-        "profile_exists": paths.profile_json.is_file(), "verifier_exists": (paths.matching_scripts / "verify-matching.py").is_file()}, ensure_ascii=False, indent=2))
-    return 0
+        "profile_exists": paths.profile_json.is_file(), "verifier_exists": (paths.matching_scripts / "verify-matching.py").is_file(),
+        "materials": materials, "ready_for_matching": ready}, ensure_ascii=False, indent=2))
+    return 0 if ready else 1
+
+
+def cmd_check_materials(args):
+    from .materials import inspect_materials, matching_freshness
+    from .corpus import build_corpus
+    paths = default_paths()
+    result = inspect_materials(paths.profile_json, paths.project)
+    if result["status"] == "passed":
+        corpus = build_corpus(paths.profile_json, paths.profile_md, paths.extra_evidence)
+        result["corpus"] = {"version": corpus.version, "chunks": len(corpus.chunks)}
+        if args.matching_file:
+            result["matching_freshness"] = matching_freshness(Path(args.matching_file), corpus.version)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["status"] == "passed" and result.get("matching_freshness", {}).get("status", "current") == "current" else 1
 
 
 def cmd_corpus(args):
@@ -327,6 +347,10 @@ def cmd_semantic_compare(args):
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobmatch", description="岗位匹配 Agent")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("check-materials", help="只读核对母表项目、简历、生成资料及当前证据版本，不调用模型")
+    p.add_argument("--matching-file", help="可选 matching JSON 或含 corpus.json 的运行目录，检查旧事实是否仍适用")
+    p.set_defaults(func=cmd_check_materials)
 
     p = sub.add_parser("demo", help="合成资料+模拟模型的完整离线演示；不读个人档案、Key或网络")
     p.add_argument("--out", default="demo-output")
