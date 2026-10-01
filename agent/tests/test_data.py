@@ -15,7 +15,8 @@ def test_profile_whitelist_and_negative_evidence(tmp_path):
     mobile = "139" + "0" * 8
     identity = "99" + "0" * 15 + "X"
     profile = {
-        "基本信息": {"移动电话": mobile, "电子邮箱": "private@example.invalid", "证件号码": identity},
+        "基本信息": {"移动电话": mobile, "电子邮箱": "private@example.invalid", "证件号码": identity,
+                    "健康问项确认来源": "medical_private_marker"},
         "家庭成员": [{"姓名": "不能流出"}],
         "教育经历": [{"id": "edu", "学历": "硕士研究生", "学校": "测试大学", "专业": "计算机", "开始": "2024", "结束": "2027",
                     "学位名称": "硕士", "学位说明": "在读，尚未毕业", "日期状态": "常规暂用值", "研究方向": "合成机器人学习课题"}],
@@ -30,8 +31,31 @@ def test_profile_whitelist_and_negative_evidence(tmp_path):
     assert "课程接触" in corpus.snapshot and "AI 辅助" in corpus.snapshot
     assert "在读，尚未毕业" in corpus.snapshot and "常规暂用值" in corpus.snapshot and "专利未授权" in corpus.snapshot
     assert "研究方向：合成机器人学习课题" in corpus.snapshot
-    for forbidden in (mobile, identity, "private@example.invalid", "abc@example.invalid", "不该出现", "不能流出", "不得进入语料"):
+    for forbidden in (mobile, identity, "private@example.invalid", "abc@example.invalid", "不该出现", "不能流出", "不得进入语料", "medical_private_marker"):
         assert forbidden not in corpus.snapshot
+
+
+def test_confirmed_education_updates_evidence_without_inventing_admission(tmp_path):
+    source, rules = tmp_path / "profile.json", tmp_path / "rules.md"
+    profile = {"教育经历": [{"id": "edu", "学历": "本科", "学校": "合成大学", "专业": "合成专业",
+        "是否全日制": True, "开始": "2021", "结束": "2025", "成绩排名": "前10%"}]}
+    rules.write_text("## 经历与表述边界\n", encoding="utf-8")
+    source.write_text(json.dumps(profile), encoding="utf-8")
+    before = build_corpus(source, rules)
+    assert "统招" not in before.snapshot and "非中外联合办学" not in before.snapshot
+    profile["教育经历"][0].update({"学习形式": "统招全日制", "学历类别": "普通高等教育",
+        "是否中外联合办学": False, "班级人数": 80, "班级综合排名名次": 40,
+        "班级综合排名来源": "合成本人确认，未提供官方证明"})
+    source.write_text(json.dumps(profile), encoding="utf-8")
+    after = build_corpus(source, rules)
+    assert after.version != before.version
+    assert "统招全日制" in after.snapshot and "非中外联合办学" in after.snapshot
+    academic = [c for c in after.chunks if "成绩排名前10%" in c.text]
+    composite = [c for c in after.chunks if "班级综合排名第40名" in c.text]
+    assert academic and composite and academic[0].id != composite[0].id
+    assert "第40名" not in academic[0].text
+    assert "成绩排名前10%" not in composite[0].text and "未提供官方证明" in composite[0].text
+    assert "统招" not in before.snapshot  # Earlier frozen evidence is unchanged.
 
 
 def test_jd_cleaning_keeps_requirements_and_nested_numbers():

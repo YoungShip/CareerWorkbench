@@ -35,7 +35,9 @@ def generate(workspace):
         "source_of_truth": master_path.as_posix(), "source_sha256": master_hash,
         "selection_rules_source": rules_path.as_posix(), "selection_rules_sha256": rules_hash,
         "read_fields_from_master": {"education": "教育经历", "work": "工作经历", "projects": "项目经历",
-            "skills": "专业技能", "intent": "求职意向", "answers": "可复制文本", "patents": "学术成果"},
+            "skills": "专业技能", "intent": "求职意向", "answers": "可复制文本", "patents": "学术成果",
+            "basic_fields": "基本信息", "standard_answers": "_网申标准答案",
+            "company_specific_answers": "_公司专项网申口径"},
         "resume_files": [{"version": key.removeprefix('简历_'), "file_path": (workspace/'lapis-cv'/name).as_posix()}
             for key, name in data["附件"].items() if key.startswith("简历_")],
         "project_index": [{"id": p['id'], "name": p['名称'], "source_field": f"项目经历[{i}]"}
@@ -63,13 +65,15 @@ def generate(workspace):
         f"- [C 版网申文本]({(workspace/'lapis-cv/秋招/网申文本-C-AI工程.txt').as_posix()})\n",
         f"- [资料总览]({(workspace/'lapis-cv/秋招/网申资料总览.md').as_posix()})\n\n",
         '## 按字段读取\n\n', '| 表单问题 | 母表位置 |\n|---|---|\n',
+        '| 基本信息、成绩、综合排名、学习形式与家庭资料 | 对应结构化字段；同义口径补查 `_网申标准答案` 与 `_自动化规则`，证件及联系人按需读私密信息 |\n',
         '| 自我介绍、专业技能、自我评价、应聘动机 | `可复制文本` 中对应 A/C 和字数版本 |\n',
         '| 项目名称、角色、日期、简介、职责与成果 | `项目经历`，按适用版本和 JD 选择 |\n',
         '| 面试、调剂、出差、驻场、轮班和入职 | `求职意向` 的对应字段；选岗硬规则同时读求职档案 |\n',
         '| 薪资与工作资格等高影响字段 | 母表已确认值，按具体问题解释，不由旧回答推断 |\n',
+        '| 公司已确认的月薪档、声明及专项表达 | `_公司专项网申口径`，先核公司、站点、批次与用途，不推广到其他公司 |\n',
         '| 专利自由描述 | `可复制文本.专利成果` |\n',
         '| 专利正式名单、排序及实际分工 | `学术成果` 对应结构化字段 |\n\n',
-        '复用已经核实的文本；公司专属问题结合官方 JD 和已确认经历表达。出现新事实、高影响含义不明或未授权承诺时交本人处理。最终提交遵循当前 AGENTS.md 的授权模式。\n']
+        '补问前查当前母表的结构化记录、标准答案、自动化规则、补充确认与按需私密来源；单个字段为空不代表事实缺失。已有同义且适用范围一致的本人确认直接复用；范围或含义不同不扩展。排名类型、学位与在读状态按原语义区分。公司专属问题结合官方 JD 和已确认经历表达。真正缺失的事实、高影响含义不明或未授权承诺交本人处理。最终提交遵循当前 AGENTS.md 的授权模式。\n']
     outputs['answer_bank.md'] = ''.join(lines)
     outputs['application_rules.md'] = ('# 申请规则入口\n\n' + header +
         '筛选条件、地域、薪资口径、面试方式、投递额度和机器人延后规则只读取求职档案的当前「选岗规则」；本文件不维护第二套阈值。\n\n' +

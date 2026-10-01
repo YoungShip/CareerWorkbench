@@ -87,6 +87,13 @@ def _education(items: list[dict], source: str) -> list[Chunk]:
         facts = [f"{e.get('开始')} 至 {e.get('结束')}"]
         if e.get("是否全日制") is True:
             facts.append("全日制")
+        for key in ("学习形式", "招生方式", "学历类别"):
+            if e.get(key):
+                facts.append(f"{key}：{e[key]}")
+        if e.get("是否中外联合办学") is True:
+            facts.append("中外联合办学")
+        elif e.get("是否中外联合办学") is False:
+            facts.append("非中外联合办学")
         if e.get("学制"):
             facts.append(f"学制{e['学制']}")
         if e.get("研究方向"):
@@ -101,6 +108,13 @@ def _education(items: list[dict], source: str) -> list[Chunk]:
         if e.get("学位授予时间"):
             facts.append(f"学位授予时间：{e['学位授予时间']}")
         chunks.append(Chunk(eid, "教育", _clean(f"[教育] {head} {'，'.join(facts)}"), f"{source}#教育经历"))
+        if e.get("班级综合排名名次") is not None:
+            rank = f"班级综合排名第{e['班级综合排名名次']}名"
+            if e.get("班级人数") is not None:
+                rank += f"（班级{e['班级人数']}人）"
+            if e.get("班级综合排名来源"):
+                rank += f"；来源：{e['班级综合排名来源']}"
+            chunks.append(Chunk(f"{eid}_class_rank", "教育", _clean(f"[综合排名·{level}] {e.get('学校')}：{rank}；与成绩排名分开。"), f"{source}#教育经历.班级综合排名"))
         courses = [_course(c) for c in e.get("主修课程") or [] if isinstance(c, dict) and c.get("课程")]
         if courses:
             text = f"[课程·{level}] {e.get('学校')}主修课程：{'、'.join(courses)}"
