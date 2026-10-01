@@ -15,7 +15,7 @@ from .corpus import Corpus
 from .jd import numbered, prepare_jd
 from .llm import ModelError, OutputTruncated, output_instruction, parse_json, structured
 from .privacy import redact
-from .record import Job, assembled, build_record, prepare_snapshots, publish, sha, write_json
+from .record import Job, assembled, build_record, prepare_snapshots, publish, sha, write_json, source_context
 from .schemas import Extraction, Judgments, extraction_check, judgments_check
 from .runtime import source_fingerprint, RunInterrupted
 from .verifier import verify
@@ -78,7 +78,8 @@ class Matcher:
         messages = [
             {"role": "system", "content": prompts.EXTRACT},
             {"role": "user", "content": json.dumps({"company": redact(self.job.company), "title": redact(self.job.title),
-              "city": redact(self.job.city), "jd": numbered(state["clauses"])}, ensure_ascii=False)},
+              "city": redact(self.job.city), "jd": numbered(state["clauses"]),
+              "source_context": source_context(self.job)}, ensure_ascii=False)},
         ]
         output = structured(self.chat, messages, Extraction, lambda v: extraction_check(v, len(state["clauses"])))
         requirements = [r.model_dump() for r in output.requirements]
@@ -101,7 +102,7 @@ class Matcher:
         evidence.update({c.id: asdict(c) for c in boundaries})
         payload = {
             "job_context": {"company": redact(self.job.company), "title": redact(self.job.title),
-                            "city": redact(self.job.city)},
+                            "city": redact(self.job.city), "source_context": source_context(self.job)},
             "requirements": [{"requirement_id": f"R{i}", **r} for i, r in enumerate(state["requirements"], 1)],
             "jd": numbered(state["clauses"]), "evidence_ids_by_requirement": results,
             "evidence": list(evidence.values()), "always_include_boundary_ids": [c.id for c in boundaries],

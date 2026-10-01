@@ -67,6 +67,7 @@ LangGraph 节点：prepare → extract → retrieve → judge ↔ search_tools �
 - 该 Agent 负责证据匹配阶段。当前选岗规则、地域偏好、额度、志愿和岗位开放状态仍由原 campus-recruitment 流程核查；pending 表示待确认，不等于本人不应尝试投递。
 - --job-id 通过现有 tracker query 读取完整状态校验后的指定岗位，保存整体 revision；查询失败不回退到可能陈旧的 CSV。离线历史评测池仍冻结原始 CSV 快照，不参与主表写入。
 - research 通过 tracker rules 冻结当前选岗规则，规则审阅仍交回 Skill。原始目录、每岗 JD 和观察引文先查 ID 与哈希再调用模型；保留抓取时间与模型处理时间，失败岗不会被写成 excluded。公司记录省略 selected_position_id，研究结果不自动登记。
+- 研究请求中的届别、招聘性质与地点观察按岗位 ID 传给拆解和判定，保存独立上下文快照及哈希。不同来源的观察不拼进原始 JD；额度、志愿及授权仍由 Skill 核对。
 - 测试和代码存在不等于本人已经熟练掌握。面试需要用真实案例解释设计、定位代码并完成小修改。
 
 当前执行器、检索方式、引用可见性与并发缓存的受控比较见 [OPTIMALITY.md](OPTIMALITY.md)。语料抽取同时保留正式专利排序、实际分工、研究方向与阶段进展。正式简历项目先归入母表，生成资料并通过 [资料链路检查](../references/materials-consistency.md)；补充证据仅承接有来源的额外事实，不代替结构化项目目录。

@@ -35,6 +35,14 @@ class Job:
     jd_text: str
     city: str = ""
     url: str = ""
+    source_context: list[dict] | None = None
+
+
+def source_context(job: Job) -> list[dict]:
+    return [{"topic": item["topic"], "quote": redact(item["quote"]),
+             "source": {"url": redact(item["source"]["url"]),
+                        "read_at": item["source"]["read_at"], "sha256": item["source"]["sha256"]}}
+            for item in job.source_context or []]
 
 
 def prepare_snapshots(directory: Path, job: Job, clauses: list[str], corpus: Corpus) -> None:
@@ -46,6 +54,8 @@ def prepare_snapshots(directory: Path, job: Job, clauses: list[str], corpus: Cor
     (directory / "jd.txt").write_text("\n".join(clauses) + "\n", encoding="utf-8", newline="\n")
     corpus.write(directory)
     write_json(directory / "catalog.json", {"records": [{"id": job.id, "title": redact(job.title)}]})
+    if job.source_context:
+        write_json(directory / "source-context.json", source_context(job))
 
 
 def build_record(job: Job, clauses: list[str], requirements: list[dict], judgments: list[dict], corpus: Corpus,
@@ -104,6 +114,9 @@ def build_record(job: Job, clauses: list[str], requirements: list[dict], judgmen
         "requirements": entries,
         "decision": {k: decision[k] for k in ("state", "reason")} | {"basis": "requirement_summary"},
     }
+    if job.source_context:
+        context_text = json.dumps(source_context(job), ensure_ascii=False, indent=2) + "\n"
+        position["jd_source"].update(context_snapshot_file="source-context.json", context_sha256=sha(context_text))
     if decision["excluded"]:
         position["exclusion_reason"] = decision["exclusion_reason"]
     return {
@@ -136,7 +149,10 @@ def publish(raw: Path, scripts: Path, directory: Path, *, extra_files=None) -> d
     if report.get("execution_status") != "completed" or report.get("human_summary_status") != "generated":
         raise RuntimeError("正式匹配流水线未完整生成结果")
     # 原流水线只复制标准快照；补入本模块的原文与转换审计，保证产物可独立核对。
-    for name in extra_files if extra_files is not None else ("jd-original.txt", "jd-preprocessing.json", "extraction-audit.json"):
+    names = list(extra_files) if extra_files is not None else ["jd-original.txt", "jd-preprocessing.json", "extraction-audit.json"]
+    if extra_files is None and (raw.parent / "source-context.json").is_file():
+        names.append("source-context.json")
+    for name in names:
         source = raw.parent / name
         (directory / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, directory / name)

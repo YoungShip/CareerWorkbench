@@ -107,3 +107,33 @@ def test_failed_job_is_retained_and_blocks_full_handoff(corpus, tmp_path):
     assert len(report["jobs"]) == 2 and report["jobs"][1]["decision"] is None
     assert not report["readiness"]["can_generate_full_comparison"]
     assert report["readiness"]["can_register_selected_position"] is False
+
+
+def test_scoped_cohort_context_reaches_both_model_steps_and_published_snapshot(corpus, tmp_path):
+    path, obj = request(tmp_path, complete=True)
+    obj["observations"] = []
+    for pid, year in (("a", "2027"), ("b", "2026")):
+        name = f"cohort-{pid}.txt"
+        quote = year + "届校园招聘"
+        value = write(tmp_path / name, quote)
+        obj["observations"].append({"topic": "cohort", "position_ids": [pid], "text": "官方届别观察",
+            "quote": quote, "source": {"file": name, "sha256": value,
+            "url": "https://example.invalid/cohort-" + pid, "read_at": "2026-09-29T10:00:00+08:00"}})
+    write(path, obj)
+    match = engine(corpus, replies() * 2)
+    out = tmp_path / "run"
+    report = run_research(path, out, match, RULES)
+    assert report["mechanical_passed"]
+    for offset, year in ((0, "2027"), (2, "2026")):
+        extracted = json.loads(match.llm.requests[offset][0][1]["content"])
+        judged = json.loads(match.llm.requests[offset + 1][0][1]["content"])
+        assert extracted["source_context"][0]["quote"] == year + "届校园招聘"
+        assert judged["job_context"]["source_context"] == extracted["source_context"]
+        assert len(extracted["source_context"]) == 1
+    pipeline = out / "pipeline"
+    raw = json.loads((pipeline / "assembled-matching.json").read_text(encoding="utf-8"))
+    for pos in raw["positions"]:
+        source = pos["jd_source"]
+        context = pipeline / source["context_snapshot_file"]
+        assert hashlib.sha256(context.read_bytes()).hexdigest() == source["context_sha256"]
+        assert (pipeline / source["provided_snapshot_file"]).read_text(encoding="utf-8") == "需要 Python 开发经验。"

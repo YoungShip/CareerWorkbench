@@ -189,8 +189,11 @@ def run_research(request_path: Path, directory: Path, matcher, rules: dict, *, r
                     continue
                 entry = index[source.position_id]
                 target = journal.begin(n)
+                context = [o.model_dump(mode="json") for o in request.observations
+                           if o.topic in {"cohort", "employment_type", "city"}
+                           and (not o.position_ids or entry.id in o.position_ids)]
                 result = matcher.run(Job(entry.id, request.company, entry.title,
-                    inputs["jds"][entry.id].decode("utf-8-sig"), entry.city, source.url), target)
+                    inputs["jds"][entry.id].decode("utf-8-sig"), entry.city, source.url, context), target)
                 journal.finish(n, result)
                 completed += 1
                 print(f"[{n + 1}/{len(request.jd_sources)}] {entry.id}: verified={result['verification_passed']}", flush=True)
@@ -245,6 +248,9 @@ def _publish_research(request, directory, matcher, journal, publication):
         prefix = target.relative_to(directory).as_posix()
         for key in ("snapshot_file", "provided_snapshot_file", "preprocessing_file"):
             jd[key] = f"{prefix}/{jd[key]}"
+        if jd.get("context_snapshot_file"):
+            jd["context_snapshot_file"] = f"{prefix}/{jd['context_snapshot_file']}"
+            extras.append(f"{prefix}/source-context.json")
         pos["candidate_source"]["snapshot_file"] = "candidate-evidence.txt"
         positions.append(pos)
         extras.extend(f"{prefix}/{name}" for name in ("jd-original.txt", "jd-preprocessing.json", "extraction-audit.json"))
