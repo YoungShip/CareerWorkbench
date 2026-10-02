@@ -1,7 +1,7 @@
 # 站点经验的本地覆盖层
 
 通用文件：`.agents/skills/job-application-form-filling/references/site-knowledge.md`。
-浪潮 HCM Cloud 本地读取实测：`CareerWorkbench/data/private/site-knowledge/inspur-hcmcloud-20261001.md`，覆盖公开目录、完整 JD、登录后共享简历基本信息保存和刷新读回；其他资料区块与岗位提交仍须现场验证。
+浪潮 HCM Cloud 本地实测：`CareerWorkbench/data/private/site-knowledge/inspur-hcmcloud-20261001.md`，覆盖公开目录、完整 JD、共享简历逐段读回，以及 2027 校招选择制投递、站点选择和 A 版 PDF 解析的真实副作用。该站点的“确认投递”会直接生成志愿和投递记录；“上传并解析”会覆盖已填的共享资料，须先解析并完成全字段审计，再触发投递。具体额度、顺序和字段行为只适用于该账号及批次，每次仍按现场页面复核。
 本地历史观察：`CareerWorkbench/data/private/site-knowledge/neuehct-atsx-20260919.md`；小米 Playwright 实测：`CareerWorkbench/data/private/site-knowledge/xiaomi-feishu-playwright-20260921.md`；国聘/中国联通实测：`CareerWorkbench/data/private/site-knowledge/iguopin-unicom-20260922.md`；哈啰/北森zhiye Playwright 实测（含 Phoenix 控件交互、验证码门、共享简历带入）：`CareerWorkbench/data/private/site-knowledge/hellobike-zhiye-20260923.md`；OPPO 校招本地观察（candidate）：`CareerWorkbench/data/private/site-knowledge/oppo-campus-20260922.md`；普源精电/飞书 ATS-X 只读目录抓取观察（candidate）：`CareerWorkbench/data/private/site-knowledge/rigol-feishu-atsx-20260923.md`；中广核/大易 hotjob 项目级一次投递模型与 DWR 分节保存观察（candidate）：`CareerWorkbench/data/private/site-knowledge/cgn-hotjob-20260923.md`。
 
 先确认公司、门户、账号范围、招聘批次和当前页面特征，再决定该观察是否适用；不匹配时不加载为执行规则。账号、验证码与凭据不记录在经验文件。
