@@ -149,7 +149,7 @@ def publish(raw: Path, scripts: Path, directory: Path, *, extra_files=None) -> d
     if report.get("execution_status") != "completed" or report.get("human_summary_status") != "generated":
         raise RuntimeError("正式匹配流水线未完整生成结果")
     # 原流水线只复制标准快照；补入本模块的原文与转换审计，保证产物可独立核对。
-    names = list(extra_files) if extra_files is not None else ["jd-original.txt", "jd-preprocessing.json", "extraction-audit.json"]
+    names = list(extra_files) if extra_files is not None else ["jd-original.txt", "jd-preprocessing.json", "extraction-audit.json", "application-gates.json"]
     if extra_files is None and (raw.parent / "source-context.json").is_file():
         names.append("source-context.json")
     for name in names:
@@ -158,4 +158,12 @@ def publish(raw: Path, scripts: Path, directory: Path, *, extra_files=None) -> d
         shutil.copy2(source, directory / name)
         if (directory / name).read_bytes() != source.read_bytes():
             raise RuntimeError("原文审计复制校验失败")
+    from .display import apply_display_policy
+    upstream = json.loads((directory / "human-summary.json").read_text(encoding="utf-8"))
+    write_json(directory / "human-summary-upstream.json", upstream)
+    record = json.loads((directory / "assembled-matching.json").read_text(encoding="utf-8"))
+    display = apply_display_policy(upstream, record)
+    write_json(directory / "human-summary.json", display)
+    report["human_summary"] = display
+    write_json(report_path, report)
     return report

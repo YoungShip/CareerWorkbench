@@ -12,18 +12,20 @@ from langgraph.graph import END, START, StateGraph
 
 from . import prompts
 from .corpus import Corpus
-from .jd import numbered, prepare_jd
+from .jd import InvalidJDSource, numbered, prepare_jd
 from .llm import ModelError, OutputTruncated, output_instruction, parse_json, structured
 from .privacy import redact
 from .record import Job, assembled, build_record, prepare_snapshots, publish, sha, write_json, source_context
 from .schemas import Extraction, Judgments, extraction_check, judgments_check
 from .runtime import source_fingerprint, RunInterrupted
 from .verifier import verify
+from .rubric import rubric_issues
 
 
 class State(TypedDict, total=False):
     clauses: list[str]
     requirements: list[dict]
+    local_gates: list[dict]
     judgments: list[dict]
     messages: list[dict]
     pending_tools: list[dict]
@@ -81,13 +83,16 @@ class Matcher:
               "city": redact(self.job.city), "jd": numbered(state["clauses"]),
               "source_context": source_context(self.job)}, ensure_ascii=False)},
         ]
-        output = structured(self.chat, messages, Extraction, lambda v: extraction_check(v, len(state["clauses"])))
+        output = structured(self.chat, messages, Extraction, lambda v: extraction_check(v, len(state["clauses"]), state["clauses"]))
         requirements = [r.model_dump() for r in output.requirements]
+        gates = [r.model_dump() | {"checked": False} for r in output.ignored_lines if r.kind in {"application_gate", "preference_gate"}]
         audit = {"requirements": requirements, "ignored_lines": [r.model_dump() for r in output.ignored_lines],
                  "all_lines_accounted": True, "semantic_correctness_verified": False}
         write_json(self.directory / "extraction-audit.json", audit)
+        write_json(self.directory / "application-gates.json", {"gates": gates, "all_checked": not gates,
+            "scope": "本地投前核查；未向匹配模型发送私密个人事实，专业匹配通过不代表这些条件已通过"})
         self.trace("extract", **audit)
-        return {"requirements": requirements}
+        return {"requirements": requirements, "local_gates": gates}
 
     def retrieve(self, state):
         results, evidence = {}, {}
@@ -105,6 +110,7 @@ class Matcher:
                             "city": redact(self.job.city), "source_context": source_context(self.job)},
             "requirements": [{"requirement_id": f"R{i}", **r} for i, r in enumerate(state["requirements"], 1)],
             "jd": numbered(state["clauses"]), "evidence_ids_by_requirement": results,
+            "local_application_gates": state.get("local_gates", []),
             "evidence": list(evidence.values()), "always_include_boundary_ids": [c.id for c in boundaries],
         }
         messages = [
@@ -179,10 +185,15 @@ class Matcher:
         path = self.directory / f"attempt-{state['repairs']}.json"
         write_json(path, state["record"])
         result = verify(state["record"], path, self.job.id, self.scripts)
-        write_json(path.with_name(path.stem + "-verification.json"), result.report)
-        attempts = state["verified_attempts"] + [{"repair": state["repairs"], "passed": result.passed, "codes": result.codes}]
+        guard_issues = rubric_issues(state["requirements"], state["judgments"], state["clauses"])
+        report = result.report | {"rubric_guard": {"passed": not guard_issues, "issues": guard_issues,
+            "semantic_accuracy_verified": False}}
+        write_json(path.with_name(path.stem + "-verification.json"), report)
+        passed = result.passed and not guard_issues
+        codes = list(dict.fromkeys(result.codes + [issue["code"] for issue in guard_issues]))
+        attempts = state["verified_attempts"] + [{"repair": state["repairs"], "passed": passed, "codes": codes}]
         self.trace("verify", **attempts[-1])
-        return {"passed": result.passed, "first_passed": attempts[0]["passed"], "issues": result.issues, "verified_attempts": attempts}
+        return {"passed": passed, "first_passed": attempts[0]["passed"], "issues": result.issues + guard_issues, "verified_attempts": attempts}
 
     def repair(self, state):
         # 保留所有已提供的检索证据，纠错不允许访问额外资源或重写 JD。
@@ -226,18 +237,20 @@ class Matcher:
             if official_pipeline:
                 pipeline = publish(final, self.scripts, directory / "pipeline")
                 report = pipeline.get("assembled_verification") or {}
-                passed = bool(pipeline.get("mechanical_passed")) and any(p.get("id") == job.id and p.get("status") == "verified" for p in report.get("positions", []))
+                passed = passed and bool(pipeline.get("mechanical_passed")) and any(p.get("id") == job.id and p.get("status") == "verified" for p in report.get("positions", []))
             result.update(
                 execution_status="completed", verification_passed=passed,
                 first_passed=state["first_passed"], repairs=state["repairs"], searches=state["searches"],
                 decision=state["record"]["positions"][0]["decision"]["state"] if passed else None,
                 attempts=state["verified_attempts"],
+                local_application_gates=state.get("local_gates", []),
+                local_application_gates_checked=not state.get("local_gates"),
             )
         except Exception as exc:
             # 错误只存类型，避免第三方异常回显密钥或完整输入。
             self.trace("failure", error_type=type(exc).__name__)
             result.update(execution_status="failed", error_type=type(exc).__name__, decision=None)
-            if isinstance(exc, ModelError):
+            if isinstance(exc, (ModelError, InvalidJDSource)):
                 result["error_message"] = str(exc)
         usage = getattr(self.llm, "usage", [])[usage_start:]
         result.update(calls=self.calls, usage=usage, elapsed_ms=round((time.perf_counter() - started) * 1000, 2))

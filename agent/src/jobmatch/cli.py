@@ -90,7 +90,8 @@ def cmd_doctor(args):
     paths = default_paths()
     try:
         config = load_config(paths.llm_config, args.provider)
-        model = {"configured": True, "provider": config.provider, "model": config.model}
+        model = {"configured": True, "provider": config.provider, "model": config.model,
+                 "max_output_tokens": config.max_output_tokens}
     except ModelError:
         model = {"configured": False}
     sheet = paths.eval_dir / "标注表-50岗.xlsx"

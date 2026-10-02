@@ -113,6 +113,8 @@ follow_up.stage：0投递、1笔试/测评、2一面、3二面、4三面、5Offe
 
 每次岗位、日志或日程变化都会原子写入 sync_queue，默认 state=pending。队列不是“同步成功”的证明：按 offernotes-sync 查询本人线上记录、合并已有阶段、写后验证，然后确认 change_id。浏览器登录不可用时保留 error/pending，向用户说明；不保存认证 token 到文件。没有创建订阅或后台无人值守任务。
 
+若 OfferNotes 的 PATCH 返回空或非 JSON 的 2xx 响应，适配器只追加一次 GET 读回：全部请求字段逐字相同才接受；不相同则保留同步错误，不重复不确定写入。2026-10-03 实测四条超过 2,000 字的详情返回空响应且未保存，其他详情正常。处理时去除网页导航、公司介绍、其他职位推荐，逐条校对全部要求和分类依据引文仍在岗位正文中，再按主表事务更新展示正文并重新同步；完整原始快照及匹配输入仍保留。禁止为了绕过长度问题静默截断职责或要求。真正超过服务容量的完整 JD 须显式说明线上展示范围，不能把线上摘要作为完整匹配输入。
+
 网页变更立即保存本地并显示待同步数；在线同步由有登录态的 AI 会话执行，不能承诺网页独立操作会立即改 OfferNotes。以后询问投递进度或继续投递时先处理待同步项。
 
 导出队列：`node dashboard/tracker-cli.js sync-export <绝对路径payload.json>`。**同步通道跟随本次投递通道（2026-09-22 本人要求）**：投递走①插件或②内置浏览器时，优先在同一通道已登录的 offernotes.cn 页面内执行 `offernotes-reconcile.js` 中的函数，不另启专用 CDP 实例；该通道不可用或未登录 OfferNotes 时保留 `pending/error` 并向本人说明，确有必要才降级到③B 专用 CDP 通道。先用payload的dryRun=true预览，检查错误与可能重复的新建，再以dryRun=false分批执行。脚本与payload只在函数闭包中求值；认证在页面内部使用，不返回凭据。将完整 `{dryRun:false,results:[...]}` 保存到私有文件，执行 `node dashboard/tracker-cli.js sync-ack <绝对路径results.json>` 后读回队列。阶段链接列最多200字符，脚本会尝试解码URL中的中文以保留完整链接，仍超限时报告错误而不截断。

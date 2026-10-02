@@ -134,6 +134,8 @@ class LLM:
             "model": self.config.model, "input_tokens": incoming, "output_tokens": outgoing,
             "cost_cny": cost, "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
             "attempts": attempt + 1,
+            "max_output_tokens": self.config.max_output_tokens,
+            "finish_reason": response.choices[0].finish_reason,
         })
         if response.choices[0].finish_reason == "length":
             raise OutputTruncated(msg.content or "")

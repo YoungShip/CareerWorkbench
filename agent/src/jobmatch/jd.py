@@ -47,6 +47,12 @@ _INLINE_NUMBER = re.compile(r"(?<![0-9A-Za-z\-])(?=(?:\d{1,2}[、．](?!\d)|\d{1
 _SENTENCE_END = re.compile(r"(?<=[；;。])")
 MAX_CLAUSE = 90
 PREPROCESS_VERSION = "jd-v2-preserve-context"
+_HTML_DOCUMENT = re.compile(r"^\s*(?:<!doctype\s+html\b|<html(?:\s|>))", re.I)
+
+
+class InvalidJDSource(ValueError):
+    def __init__(self):
+        super().__init__("JD 输入是完整 HTML 文档；先提取可见岗位正文及业务元数据，原始 HTML 另存取证，不能把页面代码直接送模型。")
 
 
 def _normalize(line: str) -> str:
@@ -110,6 +116,8 @@ class PreparedJD:
 
 def prepare_jd(text: str, *, redact_text: bool = False) -> PreparedJD:
     """清洗、断句并记录每条模型输入对应的原文行；正文带链接的要求保留。"""
+    if _HTML_DOCUMENT.match((text or "").lstrip("\ufeff")):
+        raise InvalidJDSource()
     kept: list[dict] = []
     changes: list[dict] = []
     for source_line, raw in enumerate((text or "").splitlines(), 1):

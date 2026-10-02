@@ -48,3 +48,16 @@ def test_auth_failure_never_retries_or_exposes_raw_error():
         llm.chat([])
     assert "synthetic" not in str(caught.value)
     assert transport.calls == 1
+
+
+def test_truncation_records_the_actual_output_budget_without_accepting_partial_json():
+    from jobmatch.llm import OutputTruncated
+    reply = response()
+    reply.choices[0].finish_reason = "length"
+    reply.choices[0].message.content = '{"unfinished":'
+    transport = Transport([reply])
+    llm = LLM(ModelConfig("cpa", "https://example.invalid", "fixture", "unused", max_output_tokens=16384), transport=transport)
+    with pytest.raises(OutputTruncated):
+        llm.chat([])
+    assert llm.usage[0]["max_output_tokens"] == 16384
+    assert llm.usage[0]["finish_reason"] == "length"

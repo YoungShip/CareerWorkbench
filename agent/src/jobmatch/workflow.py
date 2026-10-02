@@ -253,7 +253,7 @@ def _publish_research(request, directory, matcher, journal, publication):
             extras.append(f"{prefix}/source-context.json")
         pos["candidate_source"]["snapshot_file"] = "candidate-evidence.txt"
         positions.append(pos)
-        extras.extend(f"{prefix}/{name}" for name in ("jd-original.txt", "jd-preprocessing.json", "extraction-audit.json"))
+        extras.extend(f"{prefix}/{name}" for name in ("jd-original.txt", "jd-preprocessing.json", "extraction-audit.json", "application-gates.json"))
     raw_record = {
         "schema_version": 2, "company": redact(request.company), "date": datetime.now(timezone.utc).date().isoformat(),
         "scope": redact(request.scope), "coverage": request.coverage.model_dump(exclude_none=True),
@@ -282,6 +282,9 @@ def _publish_research(request, directory, matcher, journal, publication):
         "current_rules_sha256": hashlib.sha256((directory / "current-rules.json").read_bytes()).hexdigest(),
         "selection_rules_reviewed": False, "semantic_accuracy_verified": False,
         "selected_position_id": None, "tracker_written": False, "submission_authorized": False,
+        "local_application_gates": [{"position_id": j["job_id"], "gates": j.get("local_application_gates", [])}
+                                    for j in jobs if j.get("local_application_gates")],
+        "local_application_gates_checked": all(j.get("local_application_gates_checked", True) for j in jobs),
         "matching_file": str(pipeline_dir / "assembled-matching.json"),
         "report_file": str(directory / f"research-report-{publication:03}.md"),
         "resumptions": journal.state["resumptions"],
@@ -311,6 +314,8 @@ def render_research(report: dict, record: dict) -> str:
     lines += ["", "## 必须交回 Skill 核对", "", "- 现行选岗规则已保存为 current-rules.json，尚未声明规则审阅完成。"]
     for topic, gate in report["gate_checks"].items():
         lines.append(f"- {topic}：{'已有快照引文，需核对适用范围' if gate['status'] != 'unknown' else '未知'}")
+    for item in report.get("local_application_gates", []):
+        lines.append(f"- {item['position_id']} 本地投前条件尚未核查：" + "；".join(g['condition_text'] for g in item['gates']))
     for obs in report["observations"]:
         lines += ["", f"- {_md(obs['topic'])} 观察：{_md(obs['text'])}", f"  - 原文：{_md(obs['quote'])}",
                   f"  - 来源：{_md(obs['source']['url'])}；时间：{_md(obs['source']['read_at'])}"]

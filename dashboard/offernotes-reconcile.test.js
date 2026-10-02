@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm');const fs=require('node:fs');
-async function run({job,status=1,dryRun=false,foreign=false,events=[]}){const writes=[];const p={id:'p1',user:'u1',company:'公司',department:'岗位',job_note:'已有备注',city:'上海'};const stage={id:'s1',user:'u1',progress:'p1',stage:0,status,stage_date:'2026-09-12 00:00:00.000Z',todo_text:'https://example.com/job',note_text:'已有阶段备注'};const db={progress:[p,...(foreign?[{...p,id:'foreign',user:'other'}]:[])],progress_stages:[stage]};const context={window:{localStorage:{getItem:()=>JSON.stringify({record:{id:'u1'},token:'test-only'})}},fetch:async(url,options)=>{const m=url.match(/collections\/(\w+)\/records(?:\/([^?]+))?/);const rows=db[m[1]];let result;if(options.method==='GET'){result=m[2]?rows.find(r=>r.id===m[2]):{items:rows,totalPages:1};}else{writes.push({url,method:options.method});const values=JSON.parse(options.body);if(m[2]){result=rows.find(r=>r.id===m[2]);Object.assign(result,values);}else{result={id:'new'+rows.length,...values};rows.push(result);}}return {ok:true,json:async()=>JSON.parse(JSON.stringify(result))};}};vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('./offernotes-reconcile'),'utf8'),context);const result=await context.reconcileOfferNotes({dryRun,entries:[{job:{job_id:'j1',company:'公司',job_title:'岗位',status:'Submitted',location:'上海',job_url:'https://example.com/job',notes:'新增备注',...job},change_id:'c1',events}]});return {result,writes,db};}
+async function run({job,status=1,dryRun=false,foreign=false,events=[],emptyPatch=false,savePatch=true}){const writes=[];const p={id:'p1',user:'u1',company:'公司',department:'岗位',job_note:'已有备注',city:'上海'};const stage={id:'s1',user:'u1',progress:'p1',stage:0,status,stage_date:'2026-09-12 00:00:00.000Z',todo_text:'https://example.com/job',note_text:'已有阶段备注'};const db={progress:[p,...(foreign?[{...p,id:'foreign',user:'other'}]:[])],progress_stages:[stage]};const context={window:{localStorage:{getItem:()=>JSON.stringify({record:{id:'u1'},token:'test-only'})}},fetch:async(url,options)=>{const m=url.match(/collections\/(\w+)\/records(?:\/([^?]+))?/);const rows=db[m[1]];let result;if(options.method==='GET'){result=m[2]?rows.find(r=>r.id===m[2]):{items:rows,totalPages:1};}else{writes.push({url,method:options.method});const values=JSON.parse(options.body);if(m[2]){result=rows.find(r=>r.id===m[2]);if(savePatch)Object.assign(result,values);}else{result={id:'new'+rows.length,...values};rows.push(result);}}return {ok:true,json:async()=>{if(emptyPatch&&options.method==='PATCH')throw Error('Unexpected end of JSON input');return JSON.parse(JSON.stringify(result));}};}};vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('./offernotes-reconcile'),'utf8'),context);const result=await context.reconcileOfferNotes({dryRun,entries:[{job:{job_id:'j1',company:'公司',job_title:'岗位',status:'Submitted',location:'上海',job_url:'https://example.com/job',notes:'新增备注',...job},change_id:'c1',events}]});return {result,writes,db};}
 test('dry run performs no writes and ownership prevents foreign duplicate',async()=>{const r=await run({dryRun:true,foreign:true});assert.equal(r.writes.length,0);assert.equal(r.result.results[0].offernotes_id,'p1');assert.equal(r.result.results[0].error,undefined);});
 test('submitted defaults to awaiting result and preserves terminal/legacy completion',async()=>{let r=await run({});assert.equal(r.db.progress_stages[0].status,6);for(const status of [2,3,4,5]){r=await run({status});assert.equal(r.db.progress_stages[0].status,status);}});
 test('pending does not roll back remote progressed state',async()=>{const r=await run({job:{status:'Pending'},status:6});assert.match(r.result.results[0].error,/progressed/);assert.equal(r.db.progress_stages[0].status,6);});
@@ -31,4 +31,19 @@ test('new pending entry stays private with canonical server value and no invente
  assert.equal(created.publish_delay,100000);
  const stage=r.db.progress_stages.find(x=>x.progress===created.id);
  assert.equal(stage.status,1);assert.equal(stage.stage_date,undefined);
+});
+
+
+test('empty successful PATCH body is accepted only after exact read-back',async()=>{
+ const r=await run({emptyPatch:true});
+ assert.equal(r.result.results[0].error,undefined);
+ assert.match(r.db.progress[0].job_note,/新增备注/);
+ assert.equal(r.db.progress_stages[0].status,6);
+});
+test('empty PATCH body without persisted fields remains an error without repeated write',async()=>{
+ const r=await run({emptyPatch:true,savePatch:false});
+ assert.match(r.result.results[0].error,/read-back differs/);
+ assert.equal(r.writes.length,1);
+ assert.equal(r.db.progress[0].job_note,'已有备注');
+ assert.equal(r.db.progress_stages[0].status,1);
 });

@@ -25,7 +25,19 @@ async function reconcileOfferNotes(payload) {
  function stageLink(link){if(link.length<=200)return link;let shorter=link;try{shorter=decodeURI(link);}catch{}if(shorter.length>200)throw new Error('Official link exceeds OfferNotes 200-character stage limit; keep full link in job_note and review');return shorter;}
  async function request(collection,suffix='',method='GET',body){
   const response=await fetch('/api/collections/'+collection+'/records'+suffix,{method,headers:{Authorization:token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
-  const data=await response.json();if(!response.ok)throw new Error('OfferNotes HTTP '+response.status+' '+(data.message||'')+' '+JSON.stringify(data.data||{}));return data;
+  let data;
+  try{data=await response.json();}
+  catch{
+   // Some writes return an empty 2xx body. Verify the stored fields once;
+   // do not infer success from 200 and do not repeat an ambiguous write.
+   if(response.ok&&method==='PATCH'&&/^\/[^/?]+$/.test(suffix)){
+    const check=await request(collection,suffix);
+    if(Object.entries(body||{}).every(([key,value])=>String(check[key]??'')===String(value??'')))return check;
+    throw new Error('OfferNotes empty PATCH response; read-back differs from requested fields. Keep queue and review field lengths/content.');
+   }
+   throw new Error('OfferNotes '+method+' returned an empty/non-JSON response; not verified');
+  }
+  if(!response.ok)throw new Error('OfferNotes HTTP '+response.status+' '+(data.message||'')+' '+JSON.stringify(data.data||{}));return data;
  }
  async function all(collection){let result=[];for(let page=1;page<=100;page++){const data=await request(collection,'?perPage=500&page='+page+'&filter='+encodeURIComponent("user='"+user+"'"));if(!Array.isArray(data.items))throw new Error('Invalid list response');result.push(...data.items.filter(r=>r.user===user));if(page>=data.totalPages)break;}return result;}
  let progress=await all('progress'),stages=await all('progress_stages');const results=[];
