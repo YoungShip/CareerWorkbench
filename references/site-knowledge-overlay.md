@@ -2,7 +2,7 @@
 
 阿里2027校招内置浏览器窄视口导航实测：`CareerWorkbench/data/private/site-knowledge/alibaba-iab-overlay-20261005.md`，仅验证招聘助手浮层收起和个人中心简历导航；不包含资料保存、解析落库、志愿创建或提交结论。
 
-阿里2027校招 Playwright 共享简历实测：`CareerWorkbench/data/private/site-knowledge/alibaba-playwright-resume-20261005.md`，覆盖上传解析、月份与标签控件及部分资料保存；未验证最终志愿创建和提交。
+阿里2027校招 Playwright 实测：`CareerWorkbench/data/private/site-knowledge/alibaba-playwright-resume-20261005.md`，覆盖共享简历持久化读回、意向单、城市与顺序、最终申请页附件带入、投递成功及账号意向读回；具体额度和字段行为仅适用于当次账号及批次。
 
 通用文件：`.agents/skills/job-application-form-filling/references/site-knowledge.md`。
 浪潮 HCM Cloud 本地实测：`CareerWorkbench/data/private/site-knowledge/inspur-hcmcloud-20261001.md`，覆盖公开目录、完整 JD、共享简历逐段读回，以及 2027 校招选择制投递、站点选择和 A 版 PDF 解析的真实副作用。该站点的“确认投递”会直接生成志愿和投递记录；“上传并解析”会覆盖已填的共享资料，须先解析并完成全字段审计，再触发投递。具体额度、顺序和字段行为只适用于该账号及批次，每次仍按现场页面复核。
