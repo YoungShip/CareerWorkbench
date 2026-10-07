@@ -4,6 +4,8 @@
 
 备份保留规则：每次事务成功后自动清理，最近 30 天的备份全部保留，更早的每天只留最后一份（`createStore` 的 `backupKeepDays` 选项可调）。因此恢复到 30 天前时，只能精确到当天最后一次写入后的状态。
 
+异地备份：主表每天快照到私有仓库 `lapis-cv/tracker-backup/`（见 `scripts/backup-tracker.js`），git 历史就是按天的版本。快照里专属链接参数和身份证号已打码，本机硬盘损坏时可用它恢复岗位、日志和日程，被打码的链接需要从原始邮件重新取回。
+
 ## 恢复演练与手动恢复
 
 1. 先把选定备份的八份 CSV 复制到独立空目录，不覆盖主目录。用 JOBHUNT_DATA_DIR 指向该目录，运行 tracker-cli.js validate 和 snapshot；比较岗位、日志、日程、ID及队列与目标时间。

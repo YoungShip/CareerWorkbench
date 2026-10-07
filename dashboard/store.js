@@ -491,6 +491,18 @@ function createStore(root = __dirname, options = {}) {
     });
   }
 
+  // Consistent CSV text of every table under the store lock, for off-site backups.
+  function exportCsv() {
+    return locked(() => {
+      const s = raw();
+      validate(s);
+      return {
+        revision: revision(s),
+        files: Object.fromEntries(TABLES.map((n) => [n + '.csv', csv(s[n])])),
+      };
+    });
+  }
+
   // 精简字段投影：常规维护只需身份、状态、待办与排期，不需要完整 JD 和历史字段。
   // job_description（约 14 万字符）、legacy_record、legacy_row、notes 默认不返回。
   const SLIM_FIELDS = [
@@ -803,7 +815,7 @@ function createStore(root = __dirname, options = {}) {
       return result;
     });
   }
-  return { snapshot, query, commit, initialize };
+  return { snapshot, query, commit, initialize, exportCsv };
 }
 function validDate(value) {
   return (
