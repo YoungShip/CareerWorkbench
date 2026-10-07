@@ -1,26 +1,30 @@
 # 本机投递主数据（2026-09-13 起）
 
-主目录：`D:/AppData/Documents/resume/CareerWorkbench/dashboard/`。八份 CSV 是唯一投递主数据；Excel 已退役，只保留迁移备份，不再维护。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
+主目录：`CareerWorkbench/dashboard/`（路径相对工作区根 `resume/`，本机位置见 [local-setup.md](local-setup.md)）。八份 CSV 是唯一投递主数据；Excel 已退役，只保留迁移备份，不再维护。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
 
 ## 读取与写入
 
 所有 AI 和网页写入共用 `store.js`。不要直接重写 CSV，不运行旧 `import_tracker.py`。
 
 ```powershell
-# 会话先读行动摘要；不发送通知、不生成写入计划
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js brief
+# 会话先读行动摘要；不发送通知、不生成写入计划；默认每类最多 8 条，全清单加 --limit=100
+node CareerWorkbench/dashboard/tracker-cli.js brief
+# 尚未研究的线索：临近截止候选、断点与待研究队列
+node CareerWorkbench/discovery/cli.js next
 # 公司研究仅提取当前规则；不读整张历史公司表
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js rules
+node CareerWorkbench/dashboard/tracker-cli.js rules
 # 常规查询优先精简读取；已知对象时加 --job_id 或 --company
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js query
+node CareerWorkbench/dashboard/tracker-cli.js query
 # 全量审计、队列核查及 apply 前完整审计
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js snapshot
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js validate
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js preview D:/path/plan.json
-node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js apply D:/path/plan.json
+node CareerWorkbench/dashboard/tracker-cli.js snapshot
+node CareerWorkbench/dashboard/tracker-cli.js validate
+node CareerWorkbench/dashboard/tracker-cli.js preview <计划文件绝对路径>
+node CareerWorkbench/dashboard/tracker-cli.js apply <计划文件绝对路径>
 ```
 
 brief 只读汇总主表临期事项、discovery 临近截止候选、规则复核与同步积压；文本提取的 discovery 日期必须回官方来源确认。query 返回按需字段及 expected_revision 所需的整体 revision，snapshot 返回全部表和同一口径 revision。日常查询先 brief/query，缺少字段再按需补读；未返回字段不代表空值，不得据此清空原值。同步队列详情仍须 snapshot 核查。所有 JSON 输出命令可用 `--out=<绝对路径>` 由程序原子写出严格 UTF-8 文件，避免旧 Windows shell 重定向损坏中文。用脚本解析 JSON，不用按行 grep 推算 CSV 记录数。中文、逗号、引号和换行均合法。
+
+CLI 输出的 JSON 需要落盘时用 `--out=<绝对路径>`，由程序以严格 UTF-8 原子写入；不要用旧版 Windows PowerShell 的文本管道保存中文 JSON。
 
 计划结构（apply 前保留完整 snapshot 审计，先预览实际差异再 apply；随后按岗位 query 显式读回本次改动字段和关联事件，跨表或无法定向验证时用 snapshot）：
 
