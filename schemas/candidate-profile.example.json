@@ -1,0 +1,29 @@
+{
+  "basic": {
+    "name": "Candidate Name",
+    "city": "Candidate City",
+    "expectedGraduation": "YYYY-MM"
+  },
+  "education": [
+    {
+      "school": "Example University",
+      "start": "YYYY-MM",
+      "end": "YYYY-MM",
+      "major": "Example Major",
+      "degree": "Example Degree",
+      "fullTime": true
+    }
+  ],
+  "work": [],
+  "projects": [],
+  "language": [],
+  "attachments": {
+    "resumeA": "private/path/to/resume-a.pdf",
+    "resumeC": "private/path/to/resume-c.pdf"
+  },
+  "preferences": {
+    "city": [],
+    "salary": null,
+    "interview": "user-configured"
+  }
+}

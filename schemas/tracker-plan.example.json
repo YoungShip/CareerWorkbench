@@ -1,0 +1,13 @@
+{
+  "expected_revision": "runtime-revision",
+  "operations": [
+    {
+      "type": "job.patch",
+      "job_id": "job-example-001",
+      "patch": {
+        "status": "Pending",
+        "next_action": "Prepare application"
+      }
+    }
+  ]
+}

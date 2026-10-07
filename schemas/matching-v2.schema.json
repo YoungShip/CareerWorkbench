@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/job-application-workflow/matching-v2.schema.json",
+  "title": "Matching record schema v2",
+  "type": "object",
+  "required": ["schema_version", "company", "date", "scope", "coverage", "raw_catalog", "catalog_index", "positions"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "company": {"type": "string", "minLength": 1},
+    "date": {"type": "string", "minLength": 1},
+    "scope": {"type": "string", "minLength": 1},
+    "selected_position_id": {"type": "string", "minLength": 1},
+    "coverage": {"$ref": "#/$defs/coverage"},
+    "raw_catalog": {"$ref": "#/$defs/rawCatalog"},
+    "catalog_index": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/catalogEntry"}
+    },
+    "positions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/position"}
+    }
+  },
+  "$defs": {
+    "coverage": {
+      "type": "object",
+      "required": ["capture_status"],
+      "properties": {
+        "capture_status": {"enum": ["complete", "partial", "unknown"]},
+        "official_total": {"type": "integer", "minimum": 0},
+        "last_page_reached": {"type": "boolean"},
+        "human_attested": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"capture_status": {"const": "complete"}}},
+          "then": {"required": ["official_total", "last_page_reached", "human_attested"]}
+        }
+      ],
+      "additionalProperties": true
+    },
+    "rawCatalog": {
+      "type": "object",
+      "required": ["file", "format", "total_positions"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "format": {"enum": ["json", "csv", "tsv"]},
+        "records_path": {"type": "string"},
+        "id_path": {"type": "string"},
+        "id_column": {"type": "string", "minLength": 1},
+        "delimiter": {"type": "string", "minLength": 1, "maxLength": 1},
+        "encoding": {"type": "string"},
+        "total_positions": {"type": "integer", "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"format": {"const": "json"}}},
+          "then": {"required": ["records_path", "id_path"]}
+        },
+        {
+          "if": {"properties": {"format": {"enum": ["csv", "tsv"]}}},
+          "then": {"required": ["id_column"]}
+        }
+      ],
+      "additionalProperties": true
+    },
+    "catalogEntry": {
+      "type": "object",
+      "required": ["id", "title", "in_scope"],
+      "properties": {
+        "id": {"type": ["string", "integer"], "not": {"type": "boolean"}},
+        "title": {"type": "string", "minLength": 1},
+        "city": {"type": "string"},
+        "url": {"type": "string"},
+        "in_scope": {"type": "boolean"},
+        "exclusion": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "sourceQuote": {
+      "type": "object",
+      "required": ["id", "text"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "locator": {
+          "type": "object",
+          "required": ["line_start"],
+          "properties": {
+            "line_start": {"type": "integer", "minimum": 1},
+            "line_end": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "jdSource": {
+      "type": "object",
+      "required": ["position_id", "url", "read_at", "snapshot_file", "quotes"],
+      "properties": {
+        "position_id": {"type": ["string", "integer"], "not": {"type": "boolean"}},
+        "url": {"type": "string", "minLength": 1},
+        "read_at": {"type": "string", "minLength": 1},
+        "snapshot_file": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+        "quotes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceQuote"}}
+      },
+      "additionalProperties": true
+    },
+    "candidateSource": {
+      "type": "object",
+      "required": ["profile_version", "snapshot_file", "evidence"],
+      "properties": {
+        "profile_version": {"type": "string", "minLength": 1},
+        "snapshot_file": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/sourceQuote"}}
+      },
+      "additionalProperties": true
+    },
+    "requirement": {
+      "type": "object",
+      "required": ["requirement_id", "text", "category", "category_basis_quote_ids", "jd_quote_ids", "candidate_evidence_ids", "support", "conclusion", "judgment"],
+      "properties": {
+        "requirement_id": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "category": {"enum": ["hard_qualification", "core_capability", "plus", "ambiguous"]},
+        "category_basis_quote_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "jd_quote_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "candidate_evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "support": {"enum": ["direct_support", "transferable", "no_evidence", "conflict"]},
+        "conclusion": {"enum": ["satisfied", "not_satisfied", "pending"]},
+        "judgment": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"support": {"const": "direct_support"}}},
+          "then": {"properties": {"conclusion": {"enum": ["satisfied", "pending"]}}}
+        },
+        {
+          "if": {"properties": {"support": {"const": "transferable"}}},
+          "then": {"properties": {"conclusion": {"const": "pending"}}}
+        },
+        {
+          "if": {"properties": {"support": {"const": "no_evidence"}}},
+          "then": {"properties": {"conclusion": {"const": "pending"}}}
+        },
+        {
+          "if": {"properties": {"support": {"const": "conflict"}}},
+          "then": {"properties": {"conclusion": {"enum": ["pending", "not_satisfied"]}}}
+        }
+      ],
+      "additionalProperties": true
+    },
+    "decision": {
+      "type": "object",
+      "required": ["state", "basis", "reason"],
+      "properties": {
+        "state": {"enum": ["recommended", "consider", "pending", "excluded", "not_applicable"]},
+        "basis": {"const": "requirement_summary"},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "requirementSummary": {
+      "type": "object",
+      "required": ["requirements_total", "hard_qualification", "core_capability", "plus", "ambiguous", "core_total", "direct_support", "transferable", "no_evidence", "conflict", "satisfied", "not_satisfied", "pending"],
+      "properties": {
+        "requirements_total": {"type": "integer", "minimum": 0, "description": "requirements[] 条目总数。"},
+        "hard_qualification": {"type": "integer", "minimum": 0, "description": "category=hard_qualification 的条目数。"},
+        "core_capability": {"type": "integer", "minimum": 0, "description": "category=core_capability 的条目数。"},
+        "plus": {"type": "integer", "minimum": 0, "description": "category=plus 的条目数；不计入 core_total。"},
+        "ambiguous": {"type": "integer", "minimum": 0, "description": "category=ambiguous 的条目数；不计入 core_total。"},
+        "core_total": {"type": "integer", "minimum": 0, "description": "固定等于 hard_qualification + core_capability，不包含 plus 或 ambiguous。"},
+        "direct_support": {"type": "integer", "minimum": 0, "description": "support=direct_support 的条目数。"},
+        "transferable": {"type": "integer", "minimum": 0, "description": "support=transferable 的条目数。"},
+        "no_evidence": {"type": "integer", "minimum": 0, "description": "support=no_evidence 的条目数。"},
+        "conflict": {"type": "integer", "minimum": 0, "description": "support=conflict 的条目数。"},
+        "satisfied": {"type": "integer", "minimum": 0, "description": "conclusion=satisfied 的条目数。"},
+        "not_satisfied": {"type": "integer", "minimum": 0, "description": "conclusion=not_satisfied 的条目数。"},
+        "pending": {"type": "integer", "minimum": 0, "description": "conclusion=pending 的条目数。"}
+      },
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "position": {
+      "type": "object",
+      "required": ["id", "title", "city", "jd_source", "candidate_source", "requirements", "requirement_summary", "decision"],
+      "properties": {
+        "id": {"type": ["string", "integer"], "not": {"type": "boolean"}},
+        "title": {"type": "string", "minLength": 1},
+        "city": {"type": "string"},
+        "url": {"type": "string"},
+        "excluded": {"type": "boolean"},
+        "exclusion_reason": {"type": "string"},
+        "jd_source": {"$ref": "#/$defs/jdSource"},
+        "candidate_source": {"$ref": "#/$defs/candidateSource"},
+        "requirements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/requirement"}},
+        "requirement_summary": {"$ref": "#/$defs/requirementSummary"},
+        "decision": {"$ref": "#/$defs/decision"},
+        "grade": {"enum": ["S", "A", "B", "C"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
