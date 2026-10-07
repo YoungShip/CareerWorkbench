@@ -3,7 +3,7 @@
  * 把投递主表（八份 CSV）快照备份到私有仓库 lapis-cv/tracker-backup/ 并提交。
  *
  *   node scripts/backup-tracker.js          写入快照并在 lapis-cv 提交（不推送）
- *   node scripts/backup-tracker.js --push   提交后推送；直连失败时改走本机代理重试
+ *   node scripts/backup-tracker.js --push   提交后推送：先拉取远程新提交并把本地提交叠在其后；直连失败时改走本机代理重试
  *
  * 读取在主表锁内进行，拿到的是一个完整版本，不会备份到写了一半的事务。
  * 备份前打码：链接里 token/ticket/code/invite 等参数的值，以及通过校验的身份证号。
@@ -94,21 +94,41 @@ function backup({ data = DATA, repo = REPO, push = false, proxy = PROXY } = {}) 
   }
   let pushed = null;
   if (push) {
-    let ahead = null;
-    try {
-      ahead = run(['rev-list', '--count', '@{u}..HEAD']).trim();
-    } catch {} // no upstream yet: push anyway
-    if (ahead === '0') pushed = 'up-to-date';
-    else {
+    // 直连失败时改走本机代理重试一次
+    const remote = (args) => {
       try {
-        run(['push', '-q', 'origin', 'HEAD']);
-        pushed = 'direct';
+        run(args);
+        return 'direct';
       } catch (e) {
         if (!proxy) throw e;
-        run(['-c', 'http.proxy=' + proxy, 'push', '-q', 'origin', 'HEAD']);
-        pushed = 'proxy';
+        run(['-c', 'http.proxy=' + proxy, ...args]);
+        return 'proxy';
+      }
+    };
+    let upstream = true;
+    try {
+      run(['rev-parse', '--abbrev-ref', '@{u}']);
+    } catch {
+      upstream = false; // 还没有上游分支：直接推送
+    }
+    if (upstream) {
+      // 其他会话或工具可能已向 lapis-cv 推送：先把本地提交叠到远程最新版本之后
+      remote(['fetch', '-q', 'origin']);
+      if (run(['rev-list', '--count', 'HEAD..@{u}']).trim() !== '0') {
+        try {
+          run(['rebase', '-q', '--autostash', '@{u}']);
+        } catch (e) {
+          try {
+            run(['rebase', '--abort']);
+          } catch {}
+          throw new Error(
+            '远程有新提交且与本地冲突，备份只留在本地：' + String(e.stderr || e.message).trim()
+          );
+        }
       }
     }
+    const ahead = upstream ? run(['rev-list', '--count', '@{u}..HEAD']).trim() : null;
+    pushed = ahead === '0' ? 'up-to-date' : remote(['push', '-q', 'origin', 'HEAD']);
   }
   return { revision, committed, pushed };
 }

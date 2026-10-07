@@ -89,3 +89,49 @@ test('backup skips quietly when the backup repository is missing', () => {
   const r = backup({ repo: path.join(os.tmpdir(), 'cw-no-such-repo-' + process.pid) });
   assert.match(r.skipped, /not found/);
 });
+
+test('backup push first replays local commits on top of newer remote commits', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-remote-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const sh = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' });
+  const ident = (cwd) => {
+    sh(cwd, 'config', 'user.email', 't@example.com');
+    sh(cwd, 'config', 'user.name', 't');
+  };
+  const origin = path.join(root, 'origin.git');
+  sh(root, 'init', '-q', '--bare', '-b', 'main', origin);
+  const mine = path.join(root, 'mine');
+  sh(root, 'clone', '-q', origin, mine);
+  ident(mine);
+  sh(mine, 'switch', '-q', '-c', 'main');
+  fs.writeFileSync(path.join(mine, 'README.md'), 'cv');
+  sh(mine, 'add', 'README.md');
+  sh(mine, 'commit', '-q', '-m', 'init');
+  sh(mine, 'push', '-q', '-u', 'origin', 'main');
+  // another tool pushes research to the same repository
+  const other = path.join(root, 'other');
+  sh(root, 'clone', '-q', origin, other);
+  ident(other);
+  fs.writeFileSync(path.join(other, 'research.md'), 'new research');
+  sh(other, 'add', 'research.md');
+  sh(other, 'commit', '-q', '-m', 'research');
+  sh(other, 'push', '-q', 'origin', 'main');
+  // uncommitted local work must survive the rebase
+  fs.writeFileSync(path.join(mine, 'README.md'), 'cv edited');
+
+  const data = path.join(root, 'data');
+  createStore(data).initialize({
+    job_pool: [{ job_id: 'j1', company: 'Co', job_title: 'T', status: 'Pending' }],
+    application_log: [],
+    follow_up: [],
+    sync_queue: [],
+  });
+  const r = backup({ data, repo: mine, push: true, proxy: '' });
+  assert.equal(r.committed, true);
+  assert.equal(r.pushed, 'direct');
+  const log = sh(origin, 'log', '--format=%s', 'main');
+  assert.match(log, /主表备份/);
+  assert.match(log, /research/);
+  assert.equal(fs.readFileSync(path.join(mine, 'research.md'), 'utf8'), 'new research');
+  assert.equal(fs.readFileSync(path.join(mine, 'README.md'), 'utf8'), 'cv edited');
+});
