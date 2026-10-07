@@ -21,7 +21,7 @@
 
 ## 远程操控（RDC）
 
-使用规则见 `AGENTS.md` 第 14 条。本机工作区所在的设备是 `DESKTOP-BHF0SGG`，设备 ID 用 Remote Desktop Commander 的 `list_devices` 查询。账号下另一台设备 `DESKTOP-O8OB0VG` 上没有工作区。RDC 默认 shell 是 PowerShell；每次调用最多等 3 秒，长命令要反复读取输出，或者把输出重定向到文件再读。
+使用规则见 `AGENTS.md` 第 14 条。本机工作区所在的设备是 `DESKTOP-BHF0SGG`，设备 ID 用 Remote Desktop Commander 的 `list_devices` 查询。账号下另一台设备 `DESKTOP-O8OB0VG` 上没有工作区。RDC 默认 shell 是 PowerShell；每次调用最多等 3 秒，长命令要反复读取输出，或者把输出重定向到文件再读。云端会话的 git 代理不允许删除远程分支（返回 403），删分支要经 RDC 在本机执行 `git push origin --delete <分支>`。
 
 ## 浏览器通道
 
