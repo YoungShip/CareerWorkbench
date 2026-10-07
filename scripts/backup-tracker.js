@@ -23,7 +23,12 @@ const PROXY = process.env.JOBHUNT_BACKUP_PROXY ?? 'http://127.0.0.1:7890';
 const SUBDIR = 'tracker-backup';
 
 const SECRET_PARAM =
-  /^(token|access_token|ticket|code|authcode|key|sign|signature|auth|uid|sid|session\w*|invite\w*|exam\w*)$/i;
+  /^(token|access_token|ticket|code|authcode|key|sign|signature|auth|uid|sid|session\w*|invite\w*|exam\w*|ald|elink|candidate\w*)$/i;
+// 测评/考试平台的链接本身就是个人专属入口，整段参数都打码
+const EXAM_HOST = /(^|\.)ceping\.com$|(^|\.)(exams?|assess(ment)?|kaoshi)\./i;
+/(^|\.)(ceping\.com|[\w-]*exam[\w-]*\.[\w.]+|[\w-]*assess[\w-]*\.[\w.]+|kaoshi\.[\w.]+)$/i;
+// 测评/考试账号：通行证、准考证号、账号后面的编号
+const ACCOUNT_ID = /((?:通行证|准考证号?|考生号|账号)\s*[:：]?\s*)([A-Za-z0-9_-]{6,})/g;
 
 // GB 11643：出生日期合法且第 18 位校验码正确才视为身份证号，避免误伤岗位 ID
 function isIdCard(s) {
@@ -40,6 +45,10 @@ function isIdCard(s) {
 
 function redact(text) {
   return text
+    .replace(/(https?:\/\/([^/?#\s",]+)[^?#\s",]*)([?#][^\s",]*)/g, (all, base, host) =>
+      EXAM_HOST.test(host) ? base + '?REDACTED' : all
+    )
+    .replace(ACCOUNT_ID, (all, label) => label + 'REDACTED')
     .replace(/([?&#;])([A-Za-z_]\w*)=([^&#\s",]+)/g, (all, sep, name) =>
       SECRET_PARAM.test(name) ? `${sep}${name}=REDACTED` : all
     )

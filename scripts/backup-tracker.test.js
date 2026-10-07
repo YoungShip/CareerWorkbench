@@ -19,10 +19,27 @@ test('redact masks secret URL params and valid ID numbers but keeps job links an
   ].join('\n');
   const out = redact(text);
   assert.match(out, /token=REDACTED&lang=zh/);
-  assert.match(out, /inviteCode=REDACTED&id=42/);
+  assert.match(out, /exam\.example\.com\/start\?REDACTED/);
   assert.match(out, /job 617123456789012349/);
   assert.doesNotMatch(out, /s3cret|XYZ123|11010519491231002X/);
   assert.match(out, /1101\*{10}002X/);
+});
+
+test('redact hides assessment links, ATS candidate params and exam account numbers', () => {
+  const text = [
+    '测评链接为专属地址勿转发：https://acme.ceping.com/Login/Index?ald=abcdef0123456789&x=1',
+    '专属链接：https://foo.ceping.com/m/login?elink=Zx9y8w7v6u5t4s3r2q1p',
+    '申请页 https://app.mokahr.com/apply/acme/1#/candidateHome?candidateName=%E6%9D%A8',
+    '通行证12260515152671，准考证号：AB123456',
+    '岗位 https://job.example.com/detail?jobAdId=1234-5678&locale=zh',
+  ].join('\n');
+  const out = redact(text);
+  assert.match(out, /https:\/\/acme\.ceping\.com\/Login\/Index\?REDACTED/);
+  assert.match(out, /https:\/\/foo\.ceping\.com\/m\/login\?REDACTED/);
+  assert.match(out, /candidateName=REDACTED/);
+  assert.match(out, /通行证REDACTED，准考证号：REDACTED/);
+  assert.match(out, /jobAdId=1234-5678&locale=zh/);
+  assert.doesNotMatch(out, /abcdef0123|Zx9y8w|12260515152671|AB123456/);
 });
 
 test('backup commits only tracker-backup and is a no-op when nothing changed', (t) => {
