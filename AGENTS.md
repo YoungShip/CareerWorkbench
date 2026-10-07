@@ -1,71 +1,109 @@
 # 秋招工作区说明
 
+本文件是给 AI 的现行规则。路径相对工作区根 `resume/`。
+
+- **本机配置**：路径、端口、浏览器 profile、提醒通道和配额都在 `CareerWorkbench/references/local-setup.md`。用到这些之前先读它。
+- **规则来由**：授权日期、事故经过和一次性例外都在 `CareerWorkbench/references/rule-history.md`。只用于追溯，不作为操作依据。
+- **三份同步**：本文件与 `resume/AGENTS.md`、`lapis-cv/AGENTS.md` 保持相同规则，同步方式见第 13 条。
+
 ## 项目身份
 
-现行项目为 CareerWorkbench（求职工作台），由本人先建立的三个 Skill 工作流发展而来。当前介绍与归属先读 CareerWorkbench/references/project-origin.md；按独立设计、AI 辅助实现、第三方复用分别说明，不把历史目录名推导成整个工作流的来源。简历正文仍由本人指定的简历助手修改。
+现行项目为 CareerWorkbench（求职工作台），由本人先建立的三个 Skill 工作流发展而来。介绍与归属先读 `CareerWorkbench/references/project-origin.md`：按独立设计、AI 辅助实现、第三方复用分别说明，不能从历史目录名推断整个工作流的来源。简历正文由本人指定的简历助手修改。
 
-2026-09-13 本人批准迁移：`D:/AppData/Documents/resume/CareerWorkbench/dashboard/` 的 CSV 为唯一投递主数据。原 Excel 仅保留历史备份，不再回写；OfferNotes 为同步视图。
+## 现行口径
 
-2026-09-30 本人确认统一简历版本：当前按岗位方向使用标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用；央国企、银行和研究所同样按岗位方向选 A/C，不再维护或选择独立国企版。历史投递所用版本、材料快照和日志保留原样；新申请只从母表当前附件索引取文件。
-
-2026-10-01 资料更新闭环：新增或修改简历中的项目，必须同步母表结构化项目及对应网申文本组，运行 lapis-cv/scripts/generate_application_materials.py，再通过 jobmatch check-materials；不得只改 PDF 或自我介绍。候选资料、经历库、回答库与申请规则为生成视图，实际匹配在资料未同步时停止并提示修复；旧匹配结果按冻结证据版本复核，历史投递不改写。
+- **投递主数据**：`CareerWorkbench/dashboard/` 的 CSV 是唯一投递主数据。原 Excel 只保留历史备份，不再回写；OfferNotes 是同步视图。
+- **简历版本**：按岗位方向选标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用。央国企、银行和研究所同样按方向选 A/C，不再维护或选择独立的国企版。历史投递所用的版本、材料快照和日志保留原样；新申请只从母表当前的附件索引取文件。
+- **资料更新闭环**：新增或修改简历中的项目，必须同步母表的结构化项目及对应网申文本组，运行 `lapis-cv/scripts/generate_application_materials.py`，再通过 `jobmatch check-materials`；不能只改 PDF 或自我介绍。候选资料、经历库、回答库和申请规则都是生成视图；资料未同步时，实际匹配要停下并提示修复。旧匹配结果按冻结时的证据版本复核，历史投递不改写。
 
 ## 0. 硬触发：涉及浏览器或网页时，先读技能再动任何东西
 
-触发范围：OfferNotes、网申站点、任何要打开或操作网页的任务。第一步固定为读 `D:/AppData/Documents/resume/.agents/skills/offernotes-sync/SKILL.md` 及其 `references/sync-knowledge.md`，**先于**探测端口、启动进程或宣称能力边界。
+触发范围：OfferNotes、网申站点、任何要打开或操作网页的任务。
 
-接手这类任务的第一条命令固定为只读预检：`node CareerWorkbench/scripts/trae-preflight.js [客户端名]`（省略客户端名则自动探测）。它检查技能接线、主数据和本地第 3 级工具链，不启动 agent、不写业务数据。若某客户端 Junction 在当前文件访问层不可穿透，以 `.agents/skills` 真身绝对路径读取技能，不据此判定该客户端整体失败。
+- 第一步固定读 `.agents/skills/offernotes-sync/SKILL.md` 及其 `references/sync-knowledge.md`，**先于**探测端口、启动进程或宣称能力边界。
+- 第一条命令固定为只读预检 `node CareerWorkbench/scripts/trae-preflight.js [客户端名]`，省略客户端名时自动探测。它只检查技能接线、主数据和本地第 3 级工具链，不启动 agent，不写业务数据。
+- 某客户端的 Junction 在当前文件访问层穿不过去时，用 `.agents/skills` 真身的绝对路径读取技能，不能据此判定该客户端整体失败。
+- 浏览器通道按第 7 条的顺序选择，第 3 级的提交边界见第 8 条。①/② 属于当前 AI 运行时的能力，预检脚本代替不了对工具清单的判断。
 
-浏览器通道按 ①用户日常 Chrome 的已授权插件连接 → ②内置浏览器 → ③A Playwright 专用持久化 profile → ③B Raw CDP 专用通道 依次选择；前一级能可靠完成并读回时不升级。①/② 属当前 AI 运行时能力，预检脚本无法代替工具清单判断。
+## 1–6. 基本规则
 
-第 3 级分成两条独立实现：
-- **③A Playwright 网申通道**：专用非默认 Chrome profile 位于 `CareerWorkbench/data/private/playwright-application/chrome-profile`，本机运行时锁定 `playwright-core`；默认调试端口 9333。允许用于官网读取、登录后网申页面、简历上传、解析纠错、字段填写和完整读回，提交边界见第 8 条。
-- **③B Raw CDP 同步通道**：OfferNotes 专用 profile 位于 `CareerWorkbench/data/private/offernotes-cdp/chrome-profile`，默认端口 9222。**仅当①/②无法完成 OfferNotes 同步时兜底**，并用于 API 级精确操作和只读诊断；不作为普通 ATS 填表首选。
+1. 公司调研、选岗、核额度和投递记录维护必须使用 campus-recruitment：保留求职档案、全量目录、完整 JD、matching.json 及 verify 校验。
+2. 主表读写前必须先读 [主表协议](references/local-tracker.md)，命令和参数以协议为准。要点：
+   - **会话先看行动摘要** `brief`，未研究的线索看 `discovery/cli.js next`。摘要不是投递授权，也不是写入计划；从文本里提取的截止时间只是待确认信号，必须回官方来源核实。
+   - **常规查询用 `query`**，按 `job_id`、公司和字段过滤，不要一上来就把八张表和全部 JD 灌进上下文。`query` 是 `snapshot` 的精简投影，返回同一个整体 revision；但它不含 sync_queue，不能据此宣称已同步。未返回的字段不等于空值，缺事实时补读，不猜测、不清空。
+   - **全量审计、同步队列核查、异常恢复和 apply 前审计用 `snapshot`。**
+   - **写入**按稳定的 `job_id`，带最新的整体 `expected_revision`，保持 `preview → apply → 读回`，读回要显式包含本次改动的字段和关联事件。冲突就重读、重新预览，不自动覆盖，不直接改 CSV，不运行旧的 Excel 导入脚本。
+3. 选岗规则、经历边界和公司去重索引的唯一来源是 `lapis-cv/秋招/求职档案.md`；个人资料以网申档案.json 为准。公司研究先用 `node CareerWorkbench/dashboard/tracker-cli.js rules` 提取当前的选岗规则和经历边界，再按公司或岗位读索引和证据；进度维护不必重复加载全量背景和历史公司表。缺个人字段时按需读母表，不用旧的全景档案覆盖最新事实。
+4. 新研究的岗位经本人选定才登记为待投；实际提交、对外消息和订阅按本人的明确指令执行。已经授权过的同一动作不必重复确认。
+5. 本地写入验证后按 offernotes-sync 同步。sync_queue 里的 pending/error 必须处理；离线时明确说明保留待同步，不能声称线上已完成。公司调研占用表只负责研究认领。
+6. CareerWorkbench 是允许维护的项目；其他项目的源码只在核对经历证据时查阅，不在这里改动。
 
-端口未监听只表示对应专用 Chrome 未启动，不等于登录失效或 profile 损坏。禁止对用户日常 Chrome 默认 profile 开启 remote debugging。agent-browser 对 OfferNotes 的独立 profile 既有 403 结论不变，不再作为候选通道。
+## 7. 浏览器通道优先级
 
-1. 公司调研、选岗、核额度和投递记录维护必须使用 campus-recruitment：保留求职档案、全量目录、完整JD、matching.json及verify校验。
-2. 主表读写必须先读取 [主表协议](D:/AppData/Documents/resume/CareerWorkbench/references/local-tracker.md)。本机 `query` 是 `snapshot` 的精简投影，内部仍校验完整状态并返回同一整体 revision，不改变 Skill 的事务边界。
-   - **会话先看行动摘要**：`node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js brief` 只读汇总临期、待补救、时间未知、待投规则冲突及同步队列数量；默认每类最多 8 条，需全清单时 `--limit=100`。摘要不是投递授权或写入计划。
-   - **未研究线索用 discovery 精简视图**：`node D:/AppData/Documents/resume/CareerWorkbench/discovery/cli.js next` 查看临近截止候选、断点与待研究队列；按公司/状态补读用 query，全量审计才用 snapshot。文本提取的截止只作待确认信号，必须回官方来源核实。
-   - **常规查询默认 query**：进度、待办、排期和单岗维护先运行 `node D:/AppData/Documents/resume/CareerWorkbench/dashboard/tracker-cli.js query`，已知岗位/公司时用 `--job_id=<id>` / `--company=<名称>` 过滤，按需用 `--fields=job_id,company,job_title,status,next_action,notes` 取字段；需要完整 JD 或事件备注时用 `--include_description`。不先把八表和全部 JD 灌入上下文。
-   - **完整审计仍用 snapshot**：全量审计、同步队列核查、异常恢复和 apply 前的完整状态审计用 `snapshot`。`query` 不含 sync_queue，不能据此宣称已经同步；未返回字段不等于空值，缺少事实时补读，不猜测或清空。
-   - 写入按稳定 `job_id`，带最新整体 `expected_revision`，保持 `preview → apply → 读回`。定向读回须显式包含本次改动字段及关联事件；跨表或无法定向验证时用 `snapshot`。冲突后重读、重预览，不自动覆盖，不直接改 CSV，不运行旧 Excel 导入脚本。
-   - CLI JSON 需要落盘时使用 --out=<绝对路径>，由程序严格 UTF-8 原子写入；不要用旧 Windows PowerShell 文本管道保存中文 JSON。
-3. 选岗规则、经历边界、公司去重索引的唯一来源是 `D:/AppData/Documents/resume/lapis-cv/秋招/求职档案.md`；个人资料仍以网申档案.json为准。公司研究先用 `tracker-cli.js rules` 提取当前选岗规则和经历边界，再按公司/岗位读索引与证据；进度维护不重复加载全量背景与历史公司表。缺少个人字段时按需读母表，不用旧全景档案覆盖最新事实。
-4. 新研究岗位经本人选定才登记待投；实际提交、对外消息、订阅遵从本人明确指令。已经授权的同一动作无需重复确认。
-5. 本地写入验证后按 offernotes-sync 同步。sync_queue的pending/error必须处理；离线时明确保留待同步，不声称线上已完成。公司调研占用表只负责研究认领。
-6. CareerWorkbench为允许维护的项目；其他项目源码只在核对经历证据时查阅，不在此改动。
+涉及网页操作时依次使用：
 
-维护：本文件与 resume/AGENTS.md、lapis-cv/AGENTS.md保持相同规则。
-7. **浏览器通道优先级（2026-09-22 本人调整：Chrome 插件优先）**：涉及网页操作依次使用：
-   1) 用户日常 Chrome 的已授权插件连接；
-   2) 当前客户端内置浏览器；
-   3A) **Playwright + 专用持久化 Chrome profile**，用于网申和需要可靠 UI 交互/读回的页面；
-   3B) **Raw CDP + 专用 Chrome profile**，仅在①/②无法完成 OfferNotes 同步时兜底，并用于 API 级精确操作和只读诊断。
-   前一级能完成任务时不启用后一级。③A/③B 都使用非默认 profile，不复制、不 remote-debug 用户真实默认 Chrome。专用 profile 可持续保存已登录会话；登录态是否仍有效必须打开目标页面实际核验，不能从端口或 tab inventory 猜测。
-   **①/②控件可达性必须实测（2026-09-23 本人确认增补）**：插件已连接不等于①能完成任务——无障碍树不暴露的自定义控件（如北森 zhiye 的“立即投递”DIV）在①/②都拿不到 ref，只有打开页面才能发现；已知此类站点（北森 zhiye）直接③A，不浪费轮次重试。
-   **OfferNotes 同步通道跟随投递通道（2026-09-22 本人要求）**：本次投递走①插件或②内置浏览器时，同步优先走同一通道——该通道已登录 offernotes.cn 时，直接在该页面内用页面内认证完成 reconcile，不另启③B 专用实例；该通道不可用或未登录 OfferNotes 时，保留 `pending/error` 并向本人说明，确有必要才降级③B。投递走③A 时，同步按①→②→③B 选择。
+- ① 用户日常 Chrome 中已授权的插件连接；
+- ② 当前客户端的内置浏览器；
+- ③A **Playwright + 专用持久化 Chrome profile**：用于网申和需要可靠 UI 交互及读回的页面，包括官网读取、登录后的网申页面、简历上传、解析纠错、字段填写和完整读回；
+- ③B **Raw CDP + 专用 Chrome profile**：只在 ①/② 无法完成 OfferNotes 同步时兜底，以及用于 API 级精确操作和只读诊断；不作为普通 ATS 填表的首选。
 
-8. **第 3 级网申边界与远程接管**：
-   - **常规阅读确认自动处理（2026-10-01 本人明确授权）**：在已经授权的公司网申任务中，普通“我已阅读”、简历维护须知和同一求职目的的隐私声明由 AI 阅读并直接确认，不再单独交本人点击或反复询问。该授权用于已批准的求职资料准备与维护；实际投递仍沿用对应岗位的提交授权，未知个人事实不因自动化而编造。
-   - **③A Playwright 已通过 2026-09-21 小米真实 ATS 实测，可用于常规网申填写。** 实测覆盖：持久化手机号登录、岗位页→申请页、PDF 上传、简历解析、解析错误修正、文本框、role=option 下拉、树形城市、年月控件、自我评价及全字段读回。Playwright 对被固定页头/页脚遮挡的点击会主动拒绝；这类失败优先改用精确语义元素或组件级方法，禁止退化为盲目坐标连点。任何强制/脚本事件操作后仍必须读回。
-   - **③B Raw CDP 仍不作为普通 ATS 填表/提交通道。** 2026-09-17 携程事故中出现下拉假开、坐标误点、保存未落库和离页丢值；Raw CDP 保留给 OfferNotes/诊断。2026-09-19 智驾新程 9 岗是历史一次性 Raw CDP 例外，不推广；以后同类网申优先③A。
-   - **登录/注册接管**：新站点首次注册、短信验证码、微信扫码、滑块、CAPTCHA、Cloudflare、账号选择等由本人处理。本人不在电脑旁时，可通过 UU 等已授权远程桌面短暂接管专用 Chrome；完成后 AI 从当前页继续，不要求提供密码、验证码或 Cookie。
-   - **失败接管**：单个控件最多采用三层策略：语义 locator/真实选项 → 组件特定方法/键盘 → 在状态可恢复时一次安全重入。仍失败即标记 `needs-human` 并交本人，不无限重试、不随机 selector、不盲点坐标。刷新/重入前先判断页面内容是否已服务端保存；“页面显示过”不等于已保存。
-   - **最终提交授权与浏览器通道分离**：默认 `review`——填完并全量审计后停在最终按钮前；`preauthorized`——本人事先明确批准具体岗位或一批岗位后，审计无错误、岗位/简历/额度/高影响答案均已核实时可直接最终提交；`autonomous` 仅在本人另外明确给出范围、筛选规则和提交授权后启用，当前不因一般“自动投递”意愿自动开启。验证码、未知高影响问题、额度/志愿冲突、不可逆弹窗仍强制接管。
-   - **成功判定**：点击最终按钮不等于 Submitted。只有成功页、账号应聘记录、确认邮件或本人明确确认等真实证据，才能先落盘私有材料快照（materials / field-audit / submission-evidence / official-jd，技能第6步硬性收尾，直接执行不询问），再按主表事务协议登记 Submitted、追加申请日志并同步 OfferNotes。登记后主动向本人交付**全字段提交内容清单**（敏感打码、含未填项原因与偏差修正记录）供事后复核，不等待索要；本人指出偏差即回灌工作流信息层。
+- 前一级能可靠完成并读回时，不启用后一级。
+- ③A/③B 都用非默认 profile。不复制用户真实的默认 Chrome，禁止对它开启 remote debugging。
+- 端口没在监听，只说明对应的专用 Chrome 没启动，不代表登录失效或 profile 损坏。专用 profile 能持续保存登录会话，但登录态是否有效必须打开目标页面实际核验，不能凭端口或 tab 清单猜测。
+- agent-browser 访问 OfferNotes 的独立 profile 会 403，这个结论不变，不再作为候选通道。
+- **①/② 控件可达性必须实测**：插件已连接不等于 ① 能完成任务。无障碍树不暴露的自定义控件（如北森 zhiye 的"立即投递"DIV）在 ①/② 都拿不到 ref，只有打开页面才能发现。已知属于这类的站点（北森 zhiye）直接用 ③A，不浪费轮次重试。
+- **OfferNotes 同步通道跟随投递通道**：本次投递走 ① 或 ② 时，同步优先走同一通道。该通道已登录 offernotes.cn 的，直接在该页面内用页面内认证完成 reconcile，不另启 ③B 专用实例；该通道不可用或未登录 OfferNotes 的，保留 `pending/error` 并向本人说明，确有必要才降级到 ③B。投递走 ③A 时，同步按 ①→②→③B 选择。
 
-   **历史一次性 Raw CDP 例外**：2026-09-19 智驾新程（neueHCT）9 个匹配岗曾在本人逐步明确授权下用 Raw CDP 连续提交且未触及额度上限。该记录只作为历史证据与故障对照，不构成其他公司使用 Raw CDP 的先例；2026-09-21 起普通网申优先使用③A Playwright。
-9. **到期提醒（本人于 2026-09-20 要求"密一点提醒"）**：笔试、测评、面试等有截止时间的事项按三重提醒执行，避免遗忘：
-   ① **会话自动检查**——每次新会话开始，先跑 `node CareerWorkbench/dashboard/tracker-cli.js brief`（失败时退回 `node CareerWorkbench/scripts/remind.js --json`）；若有已过期或 72 小时内到期的事项，在第一条回复中主动列出，不必等本人询问。
-   ② **桌面通知**——`CareerWorkbench/scripts/register-reminders.ps1` 已注册 3 个 Windows 计划任务：每晚 20:00 汇总、每小时门槛检查（跨过 24h / 2h 门槛或刚过期时各提醒一次，同一门槛不重复）、登录时检查。脚本只读 `follow_up.csv`，不写主表；门槛去重状态在 `CareerWorkbench/tmp/remind-state.json`。
-   ③ **微信推送**——本人于 2026-09-20 提供 Server酱 SendKey 并明确授权，**已接通实测成功**。凭据在 `CareerWorkbench/data/private/secrets/serverchan.json`（含密钥，不得提交版本库、不得出现在对外消息或截图中），说明见同目录 `README.md`。**免费版每天上限 5 条**（超出返回 `code=40001`），因此按"这条推送能改变什么"分档分配，不平铺：**紧急(2h 内)上限 5 条、重要(24h 内)4 条、补救(已过期但有 next_action)4 条、例行(汇总/登录检查)3 条**；同档多事项合并；本地每天最多 5 条为保护预算，实际服务端限制以响应为准。发送互斥串行，只有服务端确认成功才记账；dry-run 不发送、不记已提醒、不读密钥。**已过期且无 next_action 的不单独推送**（推了也改变不了结果），只在汇总里列出。另有内容去重、服务端 40001 兜底、跳过记录（`node CareerWorkbench/scripts/remind.js --quota` 可查）。推送内容仅限秋招到期提醒，**不得**用于其他用途，也不得新增其他对外通道。
-   运行记录：`CareerWorkbench/logs/remind.log`（只记结果与计数，不记凭据）。
-   登记口径：本人确认"未做"的过期事项按协议登记**事实**，不登记为完成。
+## 8. 第 3 级网申边界与远程接管
 
-10. **现行规则与历史记录分层**：`brief.policy.status` 非 current 时，先按母表/求职档案核对规则并更新私有派生筛查配置；不得把失效配置下的空清单说成没有冲突。旧 Pending 命中新规则只提请本人复核，不自动取消、删除、改评级或实际提交；已投事实不回滚。派生规则绑定当前「选岗规则」段的哈希，历史公司表更新不引起误失效。
-11. **站点经验分层与自进化**：表单操作先读通用 Skill，再读 `CareerWorkbench/references/site-knowledge-overlay.md` 定位本地观察，并运行 `node CareerWorkbench/scripts/site-knowledge-status.js`。只有 `fresh + verified` 可作为当前操作提示；`stale/candidate/historical` 必须现场复核后才能使用。真实失败或新控件只先沉淀为 candidate，取得页面读回/服务端证据后才晋级 verified；verified 超过 `stale_after_days` 自动视为 stale。租户/批次/账号限定的额度、材料继承与推荐码行为不得推广为整个 ATS 家族规则；只有去除个人信息且跨独立站点重复验证的控件级规律才允许晋级公共 Skill。
-12. **面试准备**：先读具体岗位与 `CareerWorkbench/references/interview-proof-checklist.md`；围绕已证实项目练习讲解、定位代码和排错，不为迎合 JD 新增成果或把 AI 辅助代码说成完全独立手写。
-13. **仓库同步（2026-09-23 本人要求：仓库保持最新最优工作流）**：CareerWorkbench（origin=YoungShip/CareerWorkbench）与 lapis-cv（origin=xiepeng-yang_nioer/lapis-cv）均为 git 仓库，工作流文件（AGENTS.md、references/、scripts/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，应在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交漂移；commit message 简短说明动机。会话开始处理投递任务时顺带 `git status -sb` 检查漂移，发现未提交改动先向本人说明再提交。红线：gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交；推送前扫描 diff 不含证件号、测评专属链接、凭据。lapis-cv 的简历 PDF、求职档案等个人材料是否入库由本人逐项决定，不默认提交。resume/ 根目录的 AGENTS.md 不在仓库内，以 CareerWorkbench 仓库副本为同步源；三份 AGENTS.md 改动须三处同步更新。
-   **自主合并授权（2026-10-07 本人授权）**：CareerWorkbench 与 lapis-cv 的工作流/代码改动，AI 判断可以合并时直接合并或推送 `main`，不再逐次请示。小改动在本地检查通过后（`npm run format:check`、`npm test`，涉及 agent/ 时加 pytest）可直接提交并推送 `main`；改动大、或有本地跑不到的 CI 环节时，走分支 + PR，CI 通过后由 AI 自行合并。以下仍须先问本人：强推、改写历史、删除分支或数据；涉及投递/提交授权、对外消息等行为边界的规则改动；个人材料是否入库（仍逐项决定）。上述红线不变。
+- **常规阅读确认自动处理**：在已授权的公司网申任务中，普通的"我已阅读"、简历维护须知以及同一求职目的的隐私声明，由 AI 阅读后直接确认，不再单独交本人点击或反复询问。这项授权只用于已批准的求职资料准备与维护；实际投递仍沿用对应岗位的提交授权，未知的个人事实不能因为自动化而编造。
+- **③A 用于常规网申填写**（已经过真实 ATS 实测，范围见规则来由）。Playwright 会拒绝点击被固定页头或页脚遮挡的元素；遇到这类失败，优先改用精确的语义元素或组件级方法，禁止退化成盲目的坐标连点。任何强制或脚本事件操作之后都必须读回。
+- **③B Raw CDP 不作为普通 ATS 的填表或提交通道**，只留给 OfferNotes 和诊断。历史上的一次性 Raw CDP 例外不构成先例，同类网申优先用 ③A。
+- **登录/注册接管**：新站点首次注册、短信验证码、微信扫码、滑块、CAPTCHA、Cloudflare、账号选择等由本人处理。本人不在电脑旁时，可以通过 UU 等已授权的远程桌面短暂接管专用 Chrome；完成后 AI 从当前页继续，不索要密码、验证码或 Cookie。
+- **失败接管**：单个控件最多用三层策略：语义 locator 或真实选项 → 组件特定方法或键盘 → 状态可恢复时一次安全重入。仍然失败就标记 `needs-human` 交给本人，不无限重试、不随机换 selector、不盲点坐标。刷新或重入前，先判断页面内容是否已在服务端保存；"页面上显示过"不等于已保存。
+- **最终提交授权与浏览器通道分开**：
+  - 默认 `review`：填完并全量审计后，停在最终按钮前。
+  - `preauthorized`：本人事先明确批准了具体岗位或一批岗位，审计无错误，岗位、简历、额度和高影响答案都已核实，才可以直接最终提交。
+  - `autonomous`：只有本人另外明确给出范围、筛选规则和提交授权才启用；不会因为一般的"自动投递"意愿自动开启。
+  - 无论哪种模式，遇到验证码、未知的高影响问题、额度或志愿冲突、不可逆弹窗，都必须交本人接管。
+- **成功判定**：点击最终按钮不等于 Submitted。只有成功页、账号应聘记录、确认邮件或本人明确确认等真实证据才算数。拿到证据后：
+  1. 先落盘私有材料快照（materials / field-audit / submission-evidence / official-jd）。这是技能第 6 步的硬性收尾，直接执行，不必询问。
+  2. 再按主表事务协议登记 Submitted，追加申请日志，同步 OfferNotes。
+  3. 登记后主动向本人交付**全字段提交内容清单**供事后复核，不等本人索要。清单里敏感信息打码，写明未填项的原因和偏差修正记录。本人指出偏差时，修正要回写到工作流的信息层。
+
+## 9. 到期提醒
+
+笔试、测评、面试等有截止时间的事项按三重提醒执行，具体命令、计划任务和配额见本机配置：
+
+1. **会话自动检查**：每个新会话开始先跑行动摘要；有已过期或 72 小时内到期的事项时，在第一条回复里主动列出，不等本人问。
+2. **桌面通知**：由 Windows 计划任务执行。脚本只读 `follow_up.csv`，不写主表。
+3. **微信推送（Server酱）**：已经本人授权并接通。按"这条推送能改变什么"分档分配每日额度，不平均分；同一档的多个事项合并成一条，服务端确认成功才记账。已过期且没有 next_action 的事项不单独推送，只在汇总里列出。
+
+- 凭据不得提交到版本库，不得出现在对外消息或截图中。
+- 推送内容仅限秋招到期提醒，**不得**用于其他用途，也不得新增其他对外通道。
+- 登记口径：本人确认"没做"的过期事项，按协议登记**事实**，不登记为完成。
+
+## 10–12. 规则分层、站点经验与面试
+
+10. **现行规则与历史记录分层**：`brief.policy.status` 不是 current 时，先按母表或求职档案核对规则，并更新私有的派生筛查配置；不能把失效配置下的空清单说成"没有冲突"。旧的 Pending 命中新规则时，只提请本人复核，不自动取消、删除、改评级或实际提交；已投的事实不回滚。派生规则绑定当前「选岗规则」段落的哈希，历史公司表的更新不会引起误失效。
+11. **站点经验分层与自进化**：操作表单前先读通用 Skill，再读 `CareerWorkbench/references/site-knowledge-overlay.md` 找本地观察，并运行 `node CareerWorkbench/scripts/site-knowledge-status.js`。
+    - 只有 `fresh + verified` 的条目能直接作为当前操作提示；`stale`、`candidate`、`historical` 必须现场复核后才能用。
+    - 真实失败或新控件只先记为 candidate，拿到页面读回或服务端证据后才升为 verified；verified 超过 `stale_after_days` 自动视为 stale。
+    - 限定于租户、批次或账号的额度、材料继承和推荐码行为，不能推广成整个 ATS 家族的规则。只有去除个人信息、并在多个独立站点重复验证过的控件级规律，才能升级进公共 Skill。
+12. **面试准备**：先读具体岗位和 `CareerWorkbench/references/interview-proof-checklist.md`。围绕已证实的项目练习讲解、定位代码和排错；不为迎合 JD 新增成果，也不把 AI 辅助写的代码说成完全独立手写。
+
+## 13. 仓库同步
+
+CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
+
+- **及时提交**：工作流文件（AGENTS.md、references/、scripts/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
+- **开工检查**：会话开始处理投递任务时，顺带运行 `git status -sb` 检查漂移；发现未提交的改动，先向本人说明再提交。
+- **红线**：
+  - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交。
+  - 推送前扫描 diff，确认不含证件号、测评专属链接和凭据。
+  - lapis-cv 里的简历 PDF、求职档案等个人材料是否入库，由本人逐项决定，不默认提交。
+- **三份 AGENTS.md**：`resume/` 根目录的 AGENTS.md 不在仓库内，以 CareerWorkbench 仓库里的这份为同步源；改动要三处同步更新。
+- **自主合并授权**：CareerWorkbench 与 lapis-cv 的工作流或代码改动，AI 判断可以合并时，直接合并或推送 `main`，不再逐次请示。
+  - 小改动在本地检查通过后（`npm run format:check`、`npm test`，涉及 agent/ 时加 pytest），可以直接提交并推送 `main`。
+  - 改动大、或者有本地跑不到的 CI 环节时，走分支 + PR，CI 通过后由 AI 自行合并。
+  - 以下仍须先问本人：强推、改写历史、删除分支或数据；涉及投递/提交授权、对外消息等行为边界的规则改动；个人材料是否入库（仍逐项决定）。上述红线不变。
