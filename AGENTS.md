@@ -3,6 +3,7 @@
 本文件是给 AI 的现行规则。路径相对工作区根 `resume/`。
 
 - **本机配置**：路径、端口、浏览器 profile、提醒通道和配额都在 `CareerWorkbench/references/local-setup.md`。用到这些之前先读它。
+- **新环境或新 AI 工具接入**：仓库布局、初始化、主表恢复，以及不同环境能做什么，见 `CareerWorkbench/references/new-environment.md`。
 - **规则来由**：授权日期、事故经过和一次性例外都在 `CareerWorkbench/references/rule-history.md`。只用于追溯，不作为操作依据。
 - **三份同步**：本文件与 `resume/AGENTS.md`、`lapis-cv/AGENTS.md` 保持相同规则，同步方式见第 13 条。
 
