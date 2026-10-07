@@ -96,13 +96,14 @@
 
 CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
 
-- **及时提交**：工作流文件（AGENTS.md、references/、scripts/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
+- **及时提交**：工作流文件（AGENTS.md、references/、scripts/、skills/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
 - **开工检查**：会话开始处理投递任务时，顺带运行 `git status -sb` 检查漂移；发现未提交的改动，先向本人说明再提交。
 - **红线**：
   - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交到 CareerWorkbench。
   - 唯一例外是主表异地备份：八份 CSV 由 `scripts/backup-tracker.js` 每天打码后快照到私有的 `lapis-cv/tracker-backup/`，只提交该目录。备份打码链接里的专属参数和身份证号，不改主表本身；恢复以本机主表为准。
   - 推送前扫描 diff，确认不含证件号、测评专属链接和凭据。
   - lapis-cv 里的简历 PDF、求职档案等个人材料是否入库，由本人逐项决定，不默认提交。
+- **技能两处一致**：在 `.agents/skills` 改了技能，当次会话内运行 `npm run skills:capture` 收回 `CareerWorkbench/skills/` 并提交；预检的 `skills_source` 报告不一致时先处理。
 - **三份 AGENTS.md**：`resume/` 根目录的 AGENTS.md 不在仓库内，以 CareerWorkbench 仓库里的这份为同步源；改动要三处同步更新。
 - **自主合并授权**：CareerWorkbench 与 lapis-cv 的工作流或代码改动，AI 判断可以合并时，直接合并或推送 `main`，不再逐次请示。
   - 小改动在本地检查通过后（`npm run format:check`、`npm test`，涉及 agent/ 时加 pytest），可以直接提交并推送 `main`。

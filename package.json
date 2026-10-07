@@ -11,7 +11,10 @@
     "test:setup": "node scripts/setup-test-skills.js",
     "test": "node --test dashboard/*.test.js discovery/*.test.js scripts/*.test.js mcp/*.test.js",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "skills:check": "node scripts/skills-sync.js",
+    "skills:capture": "node scripts/skills-sync.js --capture",
+    "skills:install": "node scripts/skills-sync.js --install"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.1",

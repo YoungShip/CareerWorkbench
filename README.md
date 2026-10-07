@@ -36,11 +36,11 @@ uv run --frozen --offline jobmatch demo
 
 ## 运行测试
 
-Node 与 Agent 测试会调用正式校验器 `verify-matching.py`，它来自公共 [Skill 仓库](https://github.com/YoungShip/job-application-workflow-skills)，需放在仓库同级的 `.agents/skills`。在仓库根目录执行：
+Node 与 Agent 测试会调用正式校验器 `verify-matching.py`，它属于本仓库 [`skills/`](skills/) 中的 campus-recruitment 技能，运行时从仓库同级的 `.agents/skills` 读取。在仓库根目录执行：
 
 ```sh
 npm ci
-npm run test:setup   # 检出与 CI 相同的固定版本；已有校验器时不改动
+npm run test:setup   # 把 skills/ 复制到 ../.agents/skills；已有校验器时不改动
 npm test
 cd agent && uv sync --frozen && uv run --frozen python -X utf8 -m pytest -q
 ```
@@ -84,7 +84,7 @@ flowchart TD
 
 ## 接入自己的真实工作区
 
-上面的演示可以独立运行。完整求职工作流还需要配置自己的资料、数据目录和三个 Skill，参见 [Agent 使用指南](agent/USAGE.md)、[Skill 仓库](https://github.com/YoungShip/job-application-workflow-skills) 与 [MCP 说明](references/mcp-server.md)。Node.js 模块要求 Node.js 20 或更新版本，并通过 `npm ci` 安装锁定依赖。
+上面的演示可以独立运行。完整求职工作流还需要配置自己的资料、数据目录和三个 Skill，参见 [Agent 使用指南](agent/USAGE.md)、[三个 Skill](skills/) 与 [MCP 说明](references/mcp-server.md)。Node.js 模块要求 Node.js 20 或更新版本，并通过 `npm ci` 安装锁定依赖。
 
 部分 `AGENTS.md`、`SKILL.md` 和运维文档保留作者的 Windows 工作区路径与授权规则。它们用于说明实际集成环境；新使用者应在自己的隔离目录配置路径和授权，不要把作者的本机设置当成通用安装要求。
 

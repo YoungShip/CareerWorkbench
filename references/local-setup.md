@@ -13,7 +13,7 @@
 | 投递主数据（八份 CSV） | `resume/CareerWorkbench/dashboard/` |
 | 选岗规则、经历边界、公司去重索引 | `resume/lapis-cv/秋招/求职档案.md` |
 | 个人资料（网申母表） | `resume/lapis-cv/秋招/网申档案.json` |
-| 三个完整技能 | `resume/.agents/skills/`（campus-recruitment、job-application-form-filling、offernotes-sync） |
+| 三个完整技能 | 运行位置 `resume/.agents/skills/`，版本源 `CareerWorkbench/skills/`（campus-recruitment、job-application-form-filling、offernotes-sync），两处用 `npm run skills:check` 核对 |
 | 私有业务数据（不入库） | `resume/CareerWorkbench/data/private/` |
 | MCP 注册 | `resume/.mcp.json`，见 [mcp-server.md](mcp-server.md) |
 

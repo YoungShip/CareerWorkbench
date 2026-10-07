@@ -8,6 +8,8 @@
 
 Claude Code（CC）同样使用项目入口：resume/.claude/skills 下三个同名目录为 Junction，指向 resume/.agents/skills 原件；不创建用户级副本。CLAUDE.md 仅引导读取 AGENTS.md。预检使用 `node CareerWorkbench/scripts/trae-preflight.js [客户端名]`（客户端名可省略，省略时自动探测已接线的客户端；该脚本自 2026-09-16 起不再限定 trae/zcode/claude，文件名沿用历史），客户端新会话加载仍需实际确认。
 
+**版本源与运行位置（2026-10-07 起）**：三个技能的版本源是 `CareerWorkbench/skills/`，随本仓库提交和测试；运行位置仍是 `resume/.agents/skills/`，各客户端从这里加载。两处必须一致：在 `.agents/skills` 改了技能后，运行 `npm run skills:capture` 收回仓库并提交；仓库更新后运行 `npm run skills:install` 装到本机；`npm run skills:check` 和预检的 `skills_source` 字段会报告差异。原公开仓库 `job-application-workflow-skills` 已停止维护。
+
 三个完整技能仅维护 D:/AppData/Documents/resume/.agents/skills/ 下的 campus-recruitment、job-application-form-filling、offernotes-sync。Codex 从该项目目录发现技能；下列客户端各自的 skills 目录下三个同名目录均为 Junction，指向 .agents/skills 原件，直接使用同一份 references 和 scripts：`.claude`（Claude Code）、`.trae`（Trae）、`.zcode`（ZCode）、`.codebuddy`（CodeBuddy）、`.atomcode`、`.workbuddy`、`.workbuddy-ai`。后三者于 2026-09-16 补齐，**其目录名约定尚未经对应客户端实测确认**——若该客户端从别处发现技能，这些 Junction 不会被使用（无害但无效）。
 
 三个求职技能已从用户级目录移出，不再留全局入口。不要重新导入副本或在多个执行器同时编辑；打开整个 resume 工作区，刷新技能或新建会话。各应用是否已刷新缓存需实际确认，不把本地路径检查当作客户端验收。

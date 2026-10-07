@@ -27,6 +27,23 @@ const checks = [];
 function file(name, p) {
   checks.push({ name, ok: fs.existsSync(p), path: p });
 }
+// 仓库 skills/ 是版本源，.agents/skills 是运行位置；有差异只提示，不阻断预检
+function skillsSource() {
+  try {
+    const d = require('./skills-sync').diffSkills();
+    return d.in_sync
+      ? { in_sync: true }
+      : {
+          in_sync: false,
+          changed: d.changed,
+          only_repo: d.onlyRepo,
+          only_installed: d.onlyInstalled,
+          fix: '本机改过技能：npm run skills:capture 后提交；仓库更新未安装：npm run skills:install',
+        };
+  } catch (e) {
+    return { in_sync: null, error: e.message };
+  }
+}
 function real(p) {
   try {
     return fs.realpathSync(p).toLowerCase();
@@ -330,6 +347,7 @@ function probePort(port) {
         client_dirs: clientDirs,
         client_notes: clientNotes,
         target_skill_roots: targetSkillRoots,
+        skills_source: skillsSource(),
         python,
         node: process.execPath,
         checks,
