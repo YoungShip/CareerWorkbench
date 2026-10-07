@@ -6,7 +6,7 @@
 
 在 Trae 打开整个 D:/AppData/Documents/resume。项目规则 .trae/rules/career-workbench.md 负责路由；三个 .trae/skills/ 子目录已改为 Windows 目录联接，直接访问 D:/AppData/Documents/resume/.agents/skills/ 的同一份完整技能和经验，不再保留短入口副本。相对资源路径随整个目录共享。不复制另一套投递表，不在新 worktree 假定存在个人 CSV；客户端刷新后的联接识别仍需实测。
 
-先运行 `node D:/AppData/Documents/resume/CareerWorkbench/scripts/trae-preflight.js`。现有 Node 和 Python 可以由任意本机会话调用，无需启动 Codex；Python 默认路径仍位于本机 Codex runtime 缓存，缓存删除将导致依赖缺失。可在当前终端通过 JOBHUNT_PYTHON 指定其他已安装 Python，校验脚本仍固定为原可信技能文件，不允许研究计划选择另一个校验器。
+先运行 `node D:/AppData/Documents/resume/CareerWorkbench/scripts/trae-preflight.js`。现有 Node 和 Python 可以由任意本机会话调用，无需启动 Codex；Python 依次取 JOBHUNT_PYTHON、本机 Codex runtime 缓存（存在时）、PATH 上的 python；缓存删除后会退回 PATH，PATH 上的 Python 需能运行校验器。校验脚本仍固定为原可信技能文件，不允许研究计划选择另一个校验器。
 
 预检仅检查文件、解释器、主表校验和发现快照，不验证 Trae 的工具授权。另须实际完成一次搜索、一次官方网页打开和动态列表读取，记录工具名、URL、结果及时间。当前工具缺失时保留待验证项，不假设 Codex 的 cua、web 或定时工具可在 Trae 调用。公开网页/API研究沿用技能规则；不要为通过验收读取认证文件或导出 token。OfferNotes 只在同步任务中按原技能验证已登录页面和所需执行能力；本轮研究不为测试制造线上变更。
 

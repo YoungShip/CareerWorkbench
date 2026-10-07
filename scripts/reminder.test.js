@@ -82,7 +82,7 @@ test('real CLI JSON and due dry-run are side-effect-free in isolated data',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'reminder-cli-'));
  try{
   const project=path.join(root,'CareerWorkbench');
-  for(const rel of ['scripts/remind.js','scripts/reminder-core.js','dashboard/store.js','dashboard/todo.js','discovery/research.js']){
+  for(const rel of ['scripts/remind.js','scripts/reminder-core.js','dashboard/store.js','dashboard/todo.js','discovery/research.js','lib/python-runtime.js']){
    const target=path.join(project,rel);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(path.join(__dirname,'..',rel),target);
   }
   const data=path.join(root,'data');fs.mkdirSync(data);

@@ -1,4 +1,5 @@
 const {test}=require('node:test');
+const {defaultPython}=require('../lib/python-runtime');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const os=require('node:os');
@@ -83,7 +84,7 @@ test('live lock prevents overlapping writers and stale sync acknowledgments fail
 
 // ---- 新研究岗位登记许可（对应审阅第三节的调用方约束）----
 const {writeV2Fixture}=require('../discovery/v2-fixture');
-const RUNTIME={python:process.env.JOBHUNT_PYTHON||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'),verifier:path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py')};
+const RUNTIME={python:defaultPython(),verifier:path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py')};
 function researchFixture(t){
  const {dir,store}=fixture(t,{runtime:RUNTIME});
  const research=fs.mkdtempSync(path.join(os.tmpdir(),'jobhunt-register-'));t.after(()=>fs.rmSync(research,{recursive:true,force:true}));

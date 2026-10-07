@@ -1,5 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
+const {defaultPython}=require('../lib/python-runtime');
 const {spawnSync}=require('node:child_process');
 const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
@@ -149,7 +150,7 @@ function verifyResearch(op,lead,{python,verifier}){
 // 受信任校验器的默认运行时位置。允许用环境变量覆盖，便于测试与不同机器。
 function defaultRuntime(){
  return {
-  python:process.env.JOBHUNT_PYTHON||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'),
+  python:defaultPython(),
   verifier:process.env.JOBHUNT_VERIFIER||path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py'),
  };
 }

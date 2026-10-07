@@ -6,6 +6,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "mcp": "node mcp/server.js",
+    "test:setup": "node scripts/setup-test-skills.js",
     "test": "node --test dashboard/*.test.js discovery/*.test.js scripts/*.test.js mcp/*.test.js"
   },
   "dependencies": {
