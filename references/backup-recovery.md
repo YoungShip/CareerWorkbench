@@ -2,6 +2,8 @@
 
 每次主表事务先复制八份 CSV 到 dashboard/.store/backups/<时间-UUID>/，再写入新数据。未完成的事务由下一次 store 读取自动从 journal 指定备份回滚。不要手工删除 journal 或锁来强行绕过正在运行的写入。
 
+备份保留规则：每次事务成功后自动清理，最近 30 天的备份全部保留，更早的每天只留最后一份（`createStore` 的 `backupKeepDays` 选项可调）。因此恢复到 30 天前时，只能精确到当天最后一次写入后的状态。
+
 ## 恢复演练与手动恢复
 
 1. 先把选定备份的八份 CSV 复制到独立空目录，不覆盖主目录。用 JOBHUNT_DATA_DIR 指向该目录，运行 tracker-cli.js validate 和 snapshot；比较岗位、日志、日程、ID及队列与目标时间。

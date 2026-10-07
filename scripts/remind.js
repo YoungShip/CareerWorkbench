@@ -547,6 +547,16 @@ async function main() {
     return await runCli();
   } finally {
     release();
+    if (args.includes('--all')) cleanupTmp();
+  }
+}
+// 每晚汇总和登录检查顺带清理 tmp 里超过 14 天的临时文件；失败只记日志，不影响提醒
+function cleanupTmp() {
+  try {
+    const r = require('./clean-tmp').cleanTmp({ apply: true });
+    if (r.removed) logRun(`tmp 清理：删除 ${r.removed} 个过期文件`);
+  } catch (e) {
+    logRun('tmp 清理失败：' + e.message);
   }
 }
 if (require.main === module)

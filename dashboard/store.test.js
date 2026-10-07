@@ -810,3 +810,31 @@ test('query does not weaken write-path validation', (t) => {
     /Revision conflict/
   );
 });
+test('commits prune old backups but keep recent ones and the last of each older day', (t) => {
+  const { dir, store } = fixture(t);
+  const backups = path.join(dir, '.store', 'backups');
+  const stamp = (daysAgo, time) => {
+    const day = new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10);
+    return `${day}T${time}-000Z-fake`;
+  };
+  const names = {
+    oldEarly: stamp(40, '08-00-00'),
+    oldLate: stamp(40, '20-00-00'),
+    otherOldDay: stamp(35, '09-00-00'),
+    recentEarly: stamp(5, '08-00-00'),
+    recentLate: stamp(5, '20-00-00'),
+  };
+  for (const n of Object.values(names)) {
+    fs.mkdirSync(path.join(backups, n), { recursive: true });
+    fs.writeFileSync(path.join(backups, n, 'job_pool.csv'), 'job_id\n');
+  }
+  const { backup } = store.commit({
+    expected_revision: store.snapshot().revision,
+    operations: [{ type: 'job.patch', job_id: 'j1', patch: { notes: 'x' } }],
+  });
+  const left = new Set(fs.readdirSync(backups));
+  assert.equal(left.has(names.oldEarly), false);
+  for (const k of ['oldLate', 'otherOldDay', 'recentEarly', 'recentLate'])
+    assert.ok(left.has(names[k]), k + ' kept');
+  assert.ok(left.has(path.basename(backup)), 'new backup kept');
+});
