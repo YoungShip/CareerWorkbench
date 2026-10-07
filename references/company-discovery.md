@@ -42,7 +42,7 @@ leads.json v2 格式：schema_version、updated_at、leads数组、runs数组、
 4. 按 `preview → apply → snapshot` 执行，同批可用 `run.finish` 保存下一步。接口检查公司名称/已登记别名，重新运行可信 campus-recruitment 校验器，并保存计数、警告、文件哈希和验证结果；不信任旧 passed 文件。预览在临时副本上校验，不覆盖原 matching 或原验证文件。材料变化或版本冲突时重新读取，不强行覆盖。
 5. 每轮最多回写2家，同一轮同一线索重试不重复计数。完整研究的每岗引文、语义判断和报告一致性仍由 campus-recruitment 负责，自动校验不能代替阅读JD。
 
-校验器从工作区的 `.agents/skills/campus-recruitment/scripts/verify-matching.py` 读取；默认 Python 为 Codex 本机运行时，可用 `JOBHUNT_PYTHON` 指定已安装解释器。校验器/解释器缺失时拒绝完成回写。`research_evidence` 保存该次实际验证输出，不产生投递主表或 OfferNotes 写入。
+校验器从工作区的 `.agents/skills/campus-recruitment/scripts/verify-matching.py` 读取；Python 依次取 `JOBHUNT_PYTHON`、Codex 本机运行时（存在时）、PATH 上的 python3/python。校验器/解释器缺失时拒绝完成回写。`research_evidence` 保存该次实际验证输出，不产生投递主表或 OfferNotes 写入。
 
 所有线索及运行状态写入通过 `discovery/cli.js snapshot → preview <plan.json> → apply <plan.json> → snapshot`，plan 包含 expected_revision 和 operations，不直接覆盖 JSON。只读命令另提供 `query` 与 `next`；所有 JSON 命令可用 `--out=<绝对路径>` 避免 Windows shell 重定向破坏中文。短写入锁阻止并发写，版本冲突拒绝覆盖；单文件原子替换同时保存线索和断点，备份放私有目录 backups/。来源引用和去重命中的文件位置留存，不把个人档案原文复制到运行记录。
 

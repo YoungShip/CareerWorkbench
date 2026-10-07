@@ -34,6 +34,19 @@ uv run --frozen --offline jobmatch demo
 
 演示使用**预制模型响应**，验证程序路径；它不展示真实模型准确率，不填写或提交网申，也不修改投递数据。已有输出目录不会被覆盖；重复运行请加 `--out demo-output-2`。中断与恢复示例见 [DEMO.md](agent/DEMO.md)。
 
+## 运行测试
+
+Node 与 Agent 测试会调用正式校验器 `verify-matching.py`，它来自公共 [Skill 仓库](https://github.com/YoungShip/job-application-workflow-skills)，需放在仓库同级的 `.agents/skills`。在仓库根目录执行：
+
+```sh
+npm ci
+npm run test:setup   # 检出与 CI 相同的固定版本；已有校验器时不改动
+npm test
+cd agent && uv sync --frozen && uv run --frozen python -X utf8 -m pytest -q
+```
+
+校验器使用的 Python 依次取 `JOBHUNT_PYTHON`、作者本机的 Codex 运行时（存在时）、PATH 上的 `python3`（Windows 为 `python`）。
+
 ## 工作流与架构
 
 ```mermaid

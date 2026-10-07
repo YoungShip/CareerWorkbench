@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
+const {defaultPython}=require('../lib/python-runtime');
 const {createDiscoveryStore,names,mentions}=require('./store');
 const {queryDiscovery,buildDiscoveryNext}=require('./view');
 const {inspectResearch,verifyResearch}=require('./research');
@@ -9,8 +10,7 @@ const project=path.resolve(process.env.JOBHUNT_PROJECT_DIR||path.resolve(__dirna
 const workspace=path.resolve(process.env.JOBHUNT_WORKSPACE_DIR||path.dirname(project));
 const discoveryRoot=path.resolve(process.env.JOBHUNT_DISCOVERY_DIR||path.join(project,'data','company-discovery'));
 const dashboardRoot=path.resolve(process.env.JOBHUNT_DATA_DIR||path.join(project,'dashboard'));
-const runtime={python:process.env.JOBHUNT_PYTHON||path.join(osHome(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'),verifier:process.env.JOBHUNT_VERIFIER||path.resolve(workspace,'.agents/skills/campus-recruitment/scripts/verify-matching.py')};
-function osHome(){return require('node:os').homedir();}
+const runtime={python:defaultPython(),verifier:process.env.JOBHUNT_VERIFIER||path.resolve(workspace,'.agents/skills/campus-recruitment/scripts/verify-matching.py')};
 function context(){
  const docs=['求职档案.md','公司调研占用表.md','后续公司优先池.md'].map(n=>path.join(workspace,'lapis-cv','秋招',n));
  const records=docs.flatMap(file=>fs.readFileSync(file,'utf8').split(/\r?\n/).map((text,i)=>({source:file,line:i+1,text})));

@@ -16,7 +16,7 @@
 node D:/AppData/Documents/resume/CareerWorkbench/scripts/zcode-preflight.js
 ```
 
-检查技能、档案、Python、主表校验和发现快照。Python 默认位于本机 Codex runtime 缓存，可用 JOBHUNT_PYTHON 指定已安装 Python；无需启动 Codex。预检不证明 ZCode 的搜索、浏览器和自动续跑可用。实际 shell 以会话为准，不把 PowerShell 语法直接发送到 CMD/Git Bash。
+检查技能、档案、Python、主表校验和发现快照。Python 依次取 JOBHUNT_PYTHON、本机 Codex runtime 缓存（存在时）、PATH 上的 python；无需启动 Codex。预检不证明 ZCode 的搜索、浏览器和自动续跑可用。实际 shell 以会话为准，不把 PowerShell 语法直接发送到 CMD/Git Bash。
 
 工具选择、有效结果判定、经验复用和失败切换统一读取 [通用数据获取规则](../../.agents/skills/campus-recruitment/references/data-acquisition.md)，本入口不规定 ZCode 专属研究方法。先验证当前会话的搜索、官方网页和动态目录读取。OfferNotes 的页面脚本执行能力须在同步任务中单独验收，不能推断 Browser Use 一定支持；研究不制造同步变更。
 

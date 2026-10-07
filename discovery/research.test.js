@@ -1,8 +1,9 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {defaultPython}=require('../lib/python-runtime');
 const {createDiscoveryStore}=require('./store');
 const {inspectResearch,verifyResearch}=require('./research');
 const {writeV2Fixture,legacyRecord}=require('./v2-fixture');
-const runtime={python:process.env.JOBHUNT_PYTHON||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'),verifier:path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py')};
+const runtime={python:defaultPython(),verifier:path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py')};
 function setup(t,{record}={}){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'jobhunt-research-test-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
  const matching_file=path.join(root,'matching.json'),research_file=path.join(root,'report.md');

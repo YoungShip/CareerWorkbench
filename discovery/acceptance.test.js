@@ -13,7 +13,7 @@ function workspace(t){
  fs.copyFileSync(path.resolve(__dirname,'../../.agents/skills/campus-recruitment/scripts/verify-matching.py'),path.join(validatorDir,'verify-matching.py'));
  fs.mkdirSync(path.join(project,'discovery'),{recursive:true});fs.mkdirSync(path.join(project,'dashboard'),{recursive:true});fs.mkdirSync(path.join(project,'lib'),{recursive:true});fs.mkdirSync(docs,{recursive:true});
  for(const name of ['cli.js','store.js','research.js','view.js','v2-fixture.js'])fs.copyFileSync(path.join(__dirname,name),path.join(project,'discovery',name));
- for(const name of ['json-output.js','artifact-paths.js'])fs.copyFileSync(path.resolve(__dirname,'../lib',name),path.join(project,'lib',name));
+ for(const name of ['json-output.js','artifact-paths.js','python-runtime.js'])fs.copyFileSync(path.resolve(__dirname,'../lib',name),path.join(project,'lib',name));
  for(const name of ['store.js','todo.js'])fs.copyFileSync(path.join(__dirname,'../dashboard',name),path.join(project,'dashboard',name));
  for(const name of ['求职档案.md','公司调研占用表.md','后续公司优先池.md'])fs.writeFileSync(path.join(docs,name),'# Acceptance fixture\n');
  const cli=path.join(project,'discovery','cli.js');

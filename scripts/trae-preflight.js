@@ -10,7 +10,8 @@
 //   ①日常 Chrome 插件连接、②内置浏览器属客户端运行时能力，脚本无法探测；
 //   ③A Playwright 专用 profile 与 ③B Raw CDP 专用通道可检查本地工具链/端口。
 //   实际登录态和页面可操作性仍须执行任务的 AI 打开页面核实（见 AGENTS.md ## 0）。
-const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const fs=require('node:fs'),path=require('node:path');
+const {defaultPython}=require('../lib/python-runtime');
 const {spawnSync}=require('node:child_process');
 const http=require('node:http');
 const {targetSkillsRoot}=require('../lib/skill-paths');
@@ -18,7 +19,7 @@ const {targetSkillsRoot}=require('../lib/skill-paths');
 const project=path.resolve(__dirname,'..'),workspace=path.dirname(project);
 const skills=path.join(workspace,'.agents','skills');
 const SKILL_NAMES=['campus-recruitment','job-application-form-filling','offernotes-sync'];
-const python=process.env.JOBHUNT_PYTHON||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe');
+const python=defaultPython();
 const checks=[];
 
 function file(name,p){checks.push({name,ok:fs.existsSync(p),path:p});}
