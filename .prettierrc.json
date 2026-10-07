@@ -1,0 +1,7 @@
+{
+  "singleQuote": true,
+  "quoteProps": "preserve",
+  "printWidth": 100,
+  "trailingComma": "es5",
+  "endOfLine": "lf"
+}

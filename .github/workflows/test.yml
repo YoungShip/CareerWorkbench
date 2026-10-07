@@ -37,6 +37,7 @@ jobs:
         working-directory: CareerWorkbench
         run: |
           npm ci
+          npm run format:check
           npm test
       - name: Agent tests with fictional data and fake models
         working-directory: CareerWorkbench/agent
