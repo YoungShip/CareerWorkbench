@@ -547,7 +547,25 @@ async function main() {
     return await runCli();
   } finally {
     release();
-    if (args.includes('--all')) cleanupTmp();
+    if (args.includes('--all')) {
+      cleanupTmp();
+      startTrackerBackup();
+    }
+  }
+}
+// 每晚汇总和登录检查顺带把主表快照备份到 lapis-cv 并推送。推送可能慢，
+// 放到独立的后台进程里，不拖慢提醒；结果写 logs/backup.log
+function startTrackerBackup() {
+  try {
+    require('node:child_process')
+      .spawn(process.execPath, [path.join(__dirname, 'backup-tracker.js'), '--push'], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      })
+      .unref();
+  } catch (e) {
+    logRun('主表备份启动失败：' + e.message);
   }
 }
 // 每晚汇总和登录检查顺带清理 tmp 里超过 14 天的临时文件；失败只记日志，不影响提醒
