@@ -1,7 +1,6 @@
 #requires -Version 7.0
 [CmdletBinding()]
 param(
-  [string]$PublicRepo,
   [string]$InstalledSkills,
   [string]$GitProxy,
   [switch]$SkipRemote,
@@ -15,7 +14,7 @@ if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -ne
 }
 $MainRepo = Split-Path $PSScriptRoot -Parent
 $ResumeRoot = Split-Path $MainRepo -Parent
-if (-not $PublicRepo) { $PublicRepo = Join-Path $ResumeRoot 'job-application-workflow-skills' }
+$RepoSkills = Join-Path $MainRepo 'skills'
 if (-not $InstalledSkills) { $InstalledSkills = Join-Path $ResumeRoot '.agents\skills' }
 if (-not $GitProxy) { $GitProxy = git config --global --get http.proxy 2>$null }
 if (-not $GitProxy) {
@@ -83,8 +82,8 @@ function Get-RemoteMain([string]$Repo, [string]$Remote) {
 }
 
 Invoke-Step 'repositories exist' {
-  if (!(Test-Path $MainRepo) -or !(Test-Path $PublicRepo) -or !(Test-Path $InstalledSkills)) {
-    throw 'main/public/installed-skill path missing'
+  if (!(Test-Path $RepoSkills) -or !(Test-Path $InstalledSkills)) {
+    throw 'repository skills/ or installed-skill path missing'
   }
 }
 
@@ -92,7 +91,7 @@ if ($SkipGitClean) {
   Write-Host '[SKIP] git worktrees clean'
 } else {
   Invoke-Step 'git worktrees clean' {
-    foreach ($repo in @($MainRepo, $PublicRepo)) {
+    foreach ($repo in @($MainRepo)) {
       $dirty = @(git -C $repo status --porcelain)
       Assert-Native 'git status'
       if ($dirty.Count) { throw "dirty worktree: $repo" }
@@ -106,8 +105,8 @@ Invoke-Step 'private data is not tracked' {
   if ($tracked.Count) { throw "$($tracked.Count) private files are tracked" }
 }
 
-Invoke-Step 'installed skills match public repo' {
-  Get-ChildItem (Join-Path $PublicRepo 'skills') -Directory | ForEach-Object {
+Invoke-Step 'installed skills match repository skills/' {
+  Get-ChildItem $RepoSkills -Directory | ForEach-Object {
     Assert-SameTree $_.FullName (Join-Path $InstalledSkills $_.Name)
   }
 }
@@ -124,8 +123,13 @@ Invoke-Step 'CareerWorkbench node tests' {
   Invoke-CapturedNative 'node --test' { & node --test @tests }
 }
 
-Invoke-Step 'public workflow bundle' {
-  Invoke-CapturedNative 'validate-bundle.ps1' { & pwsh -NoProfile -File (Join-Path $PublicRepo 'scripts\validate-bundle.ps1') }
+Invoke-Step 'public skill bundle' {
+  $py = (Get-Command python -ErrorAction Stop).Source
+  foreach ($dir in @('skills', 'docs\skills', 'schemas', 'examples')) {
+    Invoke-CapturedNative "public-safety-check $dir" { & $py -X utf8 (Join-Path $MainRepo 'scripts\public-safety-check.py') (Join-Path $MainRepo $dir) }
+  }
+  Invoke-CapturedNative 'validate-skill-structure.py' { & $py -X utf8 (Join-Path $MainRepo 'scripts\validate-skill-structure.py') $MainRepo }
+  Invoke-CapturedNative 'example matching' { & $py -X utf8 (Join-Path $RepoSkills 'campus-recruitment\scripts\verify-matching.py') (Join-Path $MainRepo 'examples\vla-evidence\matching.json') }
 }
 
 Invoke-Step 'CareerWorkbench agent tests' {
@@ -140,7 +144,7 @@ if ($SkipRemote) {
   Write-Host '[SKIP] remote main heads are synchronized'
 } else {
   Invoke-Step 'remote main heads are synchronized' {
-    foreach ($item in @(@($MainRepo,'origin'), @($PublicRepo,'origin'))) {
+    foreach ($item in @(@($MainRepo,'origin'))) {
       $local = (git -C $item[0] rev-parse HEAD).Trim()
       Assert-Native 'git rev-parse'
       $remote = Get-RemoteMain $item[0] $item[1]

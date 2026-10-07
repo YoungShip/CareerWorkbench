@@ -1,0 +1,100 @@
+{
+  "passed": true,
+  "overall_status": "complete",
+  "compatibility": {
+    "mode": "schema-v2",
+    "readable": true,
+    "migration_required": false
+  },
+  "checks": {
+    "structure": "passed",
+    "catalog_reconciliation": "verified",
+    "evidence_consistency": "passed",
+    "decision_consistency": "passed",
+    "coverage_attestation": "passed"
+  },
+  "coverage": {
+    "capture_status": "complete",
+    "official_total": 1,
+    "human_attested": true,
+    "snapshot_consistency": "verified",
+    "official_completeness": "attested_not_independently_proven",
+    "message": "ID/数量对账只证明与所提供快照一致，不自动证明官网岗位已经抓全",
+    "attestation_check": "passed_for_human_review"
+  },
+  "counts": {
+    "catalog_total": 1,
+    "in_scope_catalog": 1,
+    "positions_listed": 1,
+    "positions_with_validated_evidence": 1,
+    "recommended": 0,
+    "pending": 0,
+    "excluded": 0,
+    "out_of_scope_explanations": 0,
+    "missing_in_scope_positions": 0,
+    "raw_catalog_total": 1
+  },
+  "positions": [
+    {
+      "id": "vla-role",
+      "in_scope": true,
+      "status": "verified",
+      "checks": {
+        "structure": "passed",
+        "evidence_consistency": "passed",
+        "decision_consistency": "passed"
+      },
+      "issues": [],
+      "next_step": "user_review_before_tracker_registration",
+      "requirement_summary": {
+        "requirements_total": 1,
+        "hard_qualification": 0,
+        "core_capability": 1,
+        "plus": 0,
+        "ambiguous": 0,
+        "core_total": 1,
+        "direct_support": 0,
+        "transferable": 1,
+        "no_evidence": 0,
+        "conflict": 0,
+        "satisfied": 0,
+        "not_satisfied": 0,
+        "pending": 1
+      }
+    }
+  ],
+  "readiness": {
+    "status": "ready_for_human_review",
+    "can_show_verified_positions": true,
+    "verified_position_ids": [
+      "vla-role"
+    ],
+    "registerable_position_ids": [
+      "vla-role"
+    ],
+    "selected_position_id": "vla-role",
+    "selected_position_status": "registerable",
+    "can_generate_full_comparison": true,
+    "can_register_selected_position": true,
+    "next_step": "user_review_and_register_selected_position",
+    "unresolved": [],
+    "message": "可展示单岗核验结果不等于全量比较完成；可进入下一步也不等于语义推荐一定正确"
+  },
+  "issues": [],
+  "errors": [],
+  "warnings": [],
+  "company": "Fixture Robotics",
+  "date": "2026-01-01",
+  "mechanical_passed": true,
+  "catalog_identity": {
+    "raw_ids": [
+      "vla-role"
+    ],
+    "catalog_ids": [
+      "vla-role"
+    ],
+    "missing_in_catalog": [],
+    "extra_in_catalog": [],
+    "raw_duplicate_ids": []
+  }
+}

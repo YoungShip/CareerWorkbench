@@ -97,7 +97,7 @@
 
 CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
 
-- **及时提交**：工作流文件（AGENTS.md、references/、scripts/、skills/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
+- **及时提交**：工作流文件（AGENTS.md、references/、scripts/、skills/、docs/、schemas/、examples/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
 - **开工检查**：会话开始处理投递任务时，顺带运行 `git status -sb` 检查漂移；发现未提交的改动，先向本人说明再提交。
 - **红线**：
   - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交到 CareerWorkbench。

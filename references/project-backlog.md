@@ -18,3 +18,4 @@
 - 2026-10-07 主表每日打码备份到私有 lapis-cv（tracker-backup/）
 - 2026-10-07 三个技能收进 CareerWorkbench/skills/，加同步脚本与漂移检查，CI 不再依赖旧技能仓库
 - 2026-10-07 新环境接入说明（references/new-environment.md）
+- 2026-10-07 原技能仓库的文档、Schema、示例与发布检查并入 CareerWorkbench，CI 每次运行公开内容安全扫描

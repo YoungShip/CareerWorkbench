@@ -29,6 +29,12 @@ jobs:
       - name: Install the matching validator from this repository's skills/
         working-directory: CareerWorkbench
         run: node scripts/setup-test-skills.js
+      - name: Public skill bundle checks
+        working-directory: CareerWorkbench
+        run: |
+          for d in skills docs/skills schemas examples; do "$JOBHUNT_PYTHON" -X utf8 scripts/public-safety-check.py "$d"; done
+          "$JOBHUNT_PYTHON" -X utf8 scripts/validate-skill-structure.py .
+          "$JOBHUNT_PYTHON" -X utf8 skills/campus-recruitment/scripts/verify-matching.py examples/vla-evidence/matching.json > /dev/null
       - name: Node tests
         working-directory: CareerWorkbench
         run: |

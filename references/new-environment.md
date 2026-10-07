@@ -10,7 +10,7 @@
 |---|---|---|---|
 | `YoungShip/CareerWorkbench` | 公开 | `resume/CareerWorkbench` | 工作流代码、规则、三个技能的版本源 `skills/` |
 | `YoungShip/lapis-cv` | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、主表每日备份 `tracker-backup/` |
-| `YoungShip/job-application-workflow-skills` | 公开 | 不需要克隆 | 技能的独立发布版 |
+| `YoungShip/job-application-workflow-skills` | 公开，已归档 | 不需要克隆 | 旧的技能独立仓库，2026-10-07 并入 CareerWorkbench |
 
 ```sh
 mkdir resume && cd resume

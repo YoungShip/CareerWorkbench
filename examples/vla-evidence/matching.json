@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "company": "Fixture Robotics",
+  "date": "2026-01-01",
+  "scope": "Fictional semantic fixture",
+  "selected_position_id": "vla-role",
+  "coverage": {
+    "capture_status": "complete",
+    "official_total": 1,
+    "last_page_reached": true,
+    "human_attested": true
+  },
+  "raw_catalog": {
+    "file": "catalog.json",
+    "format": "json",
+    "records_path": "",
+    "id_path": "/id",
+    "total_positions": 1
+  },
+  "catalog_index": [
+    {
+      "id": "vla-role",
+      "title": "VLA Engineer",
+      "city": "Fixture City",
+      "in_scope": true
+    }
+  ],
+  "positions": [
+    {
+      "id": "vla-role",
+      "title": "VLA Engineer",
+      "city": "Fixture City",
+      "jd_source": {
+        "position_id": "vla-role",
+        "url": "https://example.invalid/jobs/vla-role",
+        "read_at": "2026-01-01T00:00:00Z",
+        "snapshot_file": "jd.txt",
+        "quotes": [
+          {
+            "id": "jd-vla",
+            "text": "独立完成 VLA 训练。",
+            "locator": {"line_start": 1, "line_end": 1}
+          }
+        ]
+      },
+      "candidate_source": {
+        "profile_version": "fixture-profile-vla-v1",
+        "snapshot_file": "candidate-evidence.txt",
+        "evidence": [
+          {
+            "id": "ev-vla",
+            "text": "运行开源 VLA 推理。",
+            "locator": {"line_start": 1, "line_end": 1}
+          }
+        ]
+      },
+      "requirements": [
+        {
+          "requirement_id": "vla-role-req-1",
+          "text": "独立完成 VLA 训练",
+          "category": "core_capability",
+          "category_basis_quote_ids": ["jd-vla"],
+          "jd_quote_ids": ["jd-vla"],
+          "candidate_evidence_ids": ["ev-vla"],
+          "support": "transferable",
+          "conclusion": "pending",
+          "judgment": "运行开源 VLA 推理不能证明独立完成 VLA 训练。"
+        }
+      ],
+      "requirement_summary": {
+        "requirements_total": 1,
+        "hard_qualification": 0,
+        "core_capability": 1,
+        "plus": 0,
+        "ambiguous": 0,
+        "core_total": 1,
+        "direct_support": 0,
+        "transferable": 1,
+        "no_evidence": 0,
+        "conflict": 0,
+        "satisfied": 0,
+        "not_satisfied": 0,
+        "pending": 1
+      },
+      "decision": {
+        "state": "consider",
+        "basis": "requirement_summary",
+        "reason": "核心训练能力有可迁移证据，允许用户考虑尝试性申请。"
+      }
+    }
+  ]
+}
