@@ -16,7 +16,8 @@ const path = require('node:path');
 
 const SKILL_NAMES = ['campus-recruitment', 'job-application-form-filling', 'offernotes-sync'];
 const REPO_SKILLS = path.resolve(__dirname, '..', 'skills');
-const INSTALLED = path.resolve(__dirname, '..', '..', '.agents', 'skills');
+const INSTALLED =
+  process.env.JOBHUNT_INSTALLED_SKILLS || path.resolve(__dirname, '..', '..', '.agents', 'skills');
 const ignored = (rel) => rel.split(/[\\/]/).includes('__pycache__') || rel.endsWith('.pyc');
 
 function listFiles(dir) {

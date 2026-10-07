@@ -51,26 +51,6 @@ function Invoke-CapturedNative([string]$Label, [scriptblock]$Body) {
   if ($code -ne 0) { throw "$Label exited with code $code" }
 }
 
-function Get-TreeHashes([string]$Root) {
-  $map = @{}
-  Get-ChildItem $Root -Recurse -File |
-    Where-Object { $_.FullName -notmatch '__pycache__|\.pyc$' } |
-    ForEach-Object {
-      $rel = $_.FullName.Substring($Root.Length).TrimStart('\')
-      $map[$rel] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
-    }
-  return $map
-}
-
-function Assert-SameTree([string]$Source, [string]$Target) {
-  if (!(Test-Path $Target)) { throw "missing installed skill: $Target" }
-  $a = Get-TreeHashes $Source
-  $b = Get-TreeHashes $Target
-  $keys = @($a.Keys + $b.Keys | Sort-Object -Unique)
-  $diff = @($keys | Where-Object { !$a.ContainsKey($_) -or !$b.ContainsKey($_) -or $a[$_] -ne $b[$_] })
-  if ($diff.Count) { throw "tree mismatch: $($diff -join ', ')" }
-}
-
 function Get-RemoteMain([string]$Repo, [string]$Remote) {
   $args = @('-C', $Repo)
   if ($GitProxy) { $args += @('-c',"http.proxy=$GitProxy",'-c',"https.proxy=$GitProxy") }
@@ -106,9 +86,9 @@ Invoke-Step 'private data is not tracked' {
 }
 
 Invoke-Step 'installed skills match repository skills/' {
-  Get-ChildItem $RepoSkills -Directory | ForEach-Object {
-    Assert-SameTree $_.FullName (Join-Path $InstalledSkills $_.Name)
-  }
+  # Same comparison as `npm run skills:check`: CRLF/LF differences and caches are ignored
+  $env:JOBHUNT_INSTALLED_SKILLS = $InstalledSkills
+  Invoke-CapturedNative 'skills-sync.js' { & node (Join-Path $MainRepo 'scripts\skills-sync.js') }
 }
 
 Invoke-Step 'site knowledge metadata' {
