@@ -56,6 +56,8 @@
 
 运行记录在 `CareerWorkbench/logs/remind.log`，只记结果和计数，不记凭据。
 
+**tmp 清理**：每晚汇总和登录检查（`remind.js --all`）会顺带删除 `CareerWorkbench/tmp` 里超过 14 天的文件，提醒的三个状态文件不删，删除数量记在 `remind.log`。手动预览用 `node CareerWorkbench/scripts/clean-tmp.js`，加 `--apply` 才实际删除。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
+
 ## 客户端接入
 
 各 AI 客户端的接入和夜间运行说明：[trae-night-run.md](trae-night-run.md)、[zcode-night-run.md](zcode-night-run.md)、[skill-maintenance.md](skill-maintenance.md)。

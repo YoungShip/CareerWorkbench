@@ -1,7 +1,9 @@
 name: test
 
 on:
+  # Feature branches are tested by their pull request; pushing to them as well ran CI twice.
   push:
+    branches: [main]
   pull_request:
 
 permissions:

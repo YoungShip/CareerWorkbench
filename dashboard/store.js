@@ -297,7 +297,8 @@ function createStore(root = __dirname, options = {}) {
   const registrationRuntime = Object.freeze({ ...defaultRuntime(), ...(options.runtime || {}) });
   const internal = path.join(root, '.store'),
     lock = path.join(internal, 'lock'),
-    journal = path.join(internal, 'journal.json');
+    journal = path.join(internal, 'journal.json'),
+    backupKeepDays = options.backupKeepDays ?? 30;
   fs.mkdirSync(internal, { recursive: true });
   function locked(fn) {
     try {
@@ -433,7 +434,32 @@ function createStore(root = __dirname, options = {}) {
       recover();
       throw e;
     }
+    try {
+      pruneBackups();
+    } catch {}
     return { revision: revision(s), backup };
+  }
+  // Every commit snapshots all tables, so backups grow without bound. Keep every
+  // snapshot from the last backupKeepDays days and, for older days, only the last
+  // snapshot of each day. Runs after the journal is gone, inside the write lock.
+  function pruneBackups(now = Date.now()) {
+    const dir = path.join(internal, 'backups');
+    if (!fs.existsSync(dir)) return [];
+    const names = fs
+      .readdirSync(dir)
+      .filter((n) => /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/.test(n))
+      .sort();
+    const lastOfDay = new Map(names.map((n) => [n.slice(0, 10), n]));
+    const keep = new Set(lastOfDay.values());
+    const cutoff = now - backupKeepDays * 86400000;
+    const removed = [];
+    for (const n of names) {
+      const at = Date.parse(n.slice(0, 10) + 'T' + n.slice(11, 19).replace(/-/g, ':') + 'Z');
+      if (keep.has(n) || !(at < cutoff)) continue;
+      fs.rmSync(path.join(dir, n), { recursive: true, force: true });
+      removed.push(n);
+    }
+    return removed;
   }
   function warnings(s) {
     const groups = new Map();
