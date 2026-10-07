@@ -19,6 +19,10 @@
 
 三份 `AGENTS.md`：`resume/AGENTS.md` 不在任何仓库内，以 `CareerWorkbench/AGENTS.md` 为同步源；`lapis-cv/AGENTS.md` 随 lapis-cv 仓库提交。
 
+## 远程操控（RDC）
+
+使用规则见 `AGENTS.md` 第 14 条。本机工作区所在的设备是 `DESKTOP-BHF0SGG`，设备 ID 用 Remote Desktop Commander 的 `list_devices` 查询。账号下另一台设备 `DESKTOP-O8OB0VG` 上没有工作区。RDC 默认 shell 是 PowerShell；每次调用最多等 3 秒，长命令要反复读取输出，或者把输出重定向到文件再读。
+
 ## 浏览器通道
 
 选用顺序与边界见 `AGENTS.md` 第 0、7、8 条。第 3 级两条通道都使用专用的非默认 Chrome profile：
