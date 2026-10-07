@@ -9,7 +9,7 @@
 | 内容 | 位置 |
 |---|---|
 | 本项目 | `resume/CareerWorkbench`（origin = YoungShip/CareerWorkbench） |
-| 简历与母表仓库 | `resume/lapis-cv`（origin = YoungShip/lapis-cv，私有；2026-10-07 前的远程是已注销的公司托管账号，已移除） |
+| 简历与母表仓库 | `resume/lapis-cv`（origin = YoungShip/lapis-cv，私有） |
 | 投递主数据（八份 CSV） | `resume/CareerWorkbench/dashboard/` |
 | 选岗规则、经历边界、公司去重索引 | `resume/lapis-cv/秋招/求职档案.md` |
 | 个人资料（网申母表） | `resume/lapis-cv/秋招/网申档案.json` |
@@ -21,7 +21,7 @@
 
 ## 远程操控（RDC）
 
-使用规则见 `AGENTS.md` 第 14 条。本机工作区所在的设备是 `DESKTOP-BHF0SGG`，设备 ID 用 Remote Desktop Commander 的 `list_devices` 查询。账号下另一台设备 `DESKTOP-O8OB0VG` 上没有工作区。RDC 默认 shell 是 PowerShell；每次调用最多等 3 秒，长命令要反复读取输出，或者把输出重定向到文件再读。云端会话的 git 代理不允许删除远程分支（返回 403），删分支要经 RDC 在本机执行 `git push origin --delete <分支>`。本机 git 没有配置代理，直连 GitHub 不稳定（小的拉取通常能成功，大推送常常连接超时）；本机开着系统代理 `127.0.0.1:7890`，推送失败时临时加 `git -c http.proxy=http://127.0.0.1:7890 push ...`，不改全局配置。
+使用规则见 `AGENTS.md` 第 14 条。工作区所在的设备用 Remote Desktop Commander 的 `list_devices` 查询，选有 `D:/AppData/Documents/resume` 目录的那台。RDC 默认 shell 是 PowerShell；每次调用最多等 3 秒，长命令要反复读取输出，或者把输出重定向到文件再读。云端会话的 git 代理不允许删除远程分支（返回 403），删分支要经 RDC 在本机执行 `git push origin --delete <分支>`。本机 git 没有配置代理，直连 GitHub 不稳定（小的拉取通常能成功，大推送常常连接超时）；本机开着系统代理 `127.0.0.1:7890`，推送失败时临时加 `git -c http.proxy=http://127.0.0.1:7890 push ...`，不改全局配置。
 
 ## 浏览器通道
 

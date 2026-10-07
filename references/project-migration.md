@@ -1,6 +1,6 @@
 # CareerWorkbench 迁移说明
 
-迁移日期：2026-09-29。现行目录是 D:/AppData/Documents/resume/CareerWorkbench，仓库是 YoungShip/CareerWorkbench，仓库可见性保持原来的 private。
+迁移日期：2026-09-29。现行目录是 D:/AppData/Documents/resume/CareerWorkbench，仓库是 YoungShip/CareerWorkbench，迁移时仓库为私有，现已公开（简历中的项目链接指向它）。
 
 ## 当前入口
 

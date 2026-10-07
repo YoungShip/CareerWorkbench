@@ -8,9 +8,9 @@
 
 | 仓库 | 可见性 | 放在 | 内容 |
 |---|---|---|---|
-| `YoungShip/CareerWorkbench` | 私有 | `resume/CareerWorkbench` | 工作流代码、规则、三个技能的版本源 `skills/` |
+| `YoungShip/CareerWorkbench` | 公开 | `resume/CareerWorkbench` | 工作流代码、规则、三个技能的版本源 `skills/` |
 | `YoungShip/lapis-cv` | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、主表每日备份 `tracker-backup/` |
-| `YoungShip/job-application-workflow-skills` | 公开 | 不需要克隆 | 技能的公开发布版，只用于展示 |
+| `YoungShip/job-application-workflow-skills` | 公开 | 不需要克隆 | 技能的独立发布版 |
 
 ```sh
 mkdir resume && cd resume

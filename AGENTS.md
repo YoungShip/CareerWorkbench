@@ -104,7 +104,7 @@ CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
   - 唯一例外是主表异地备份：八份 CSV 由 `scripts/backup-tracker.js` 每天打码后快照到私有的 `lapis-cv/tracker-backup/`，只提交该目录。备份打码链接里的专属参数和身份证号，不改主表本身；恢复以本机主表为准。
   - 推送前扫描 diff，确认不含证件号、测评专属链接和凭据。
   - lapis-cv 里的简历 PDF、求职档案等个人材料是否入库，由本人逐项决定，不默认提交。
-- **技能两处一致**：在 `.agents/skills` 改了技能，当次会话内运行 `npm run skills:capture` 收回 `CareerWorkbench/skills/` 并提交；预检的 `skills_source` 报告不一致时先处理。
+- **技能两处一致**：在 `.agents/skills` 改了技能，当次会话内运行 `npm run skills:capture` 收回 `CareerWorkbench/skills/` 并提交；预检的 `skills_source` 报告不一致时先处理。CareerWorkbench 是**公开仓库**（简历项目链接），收回的技能改动在提交前按第 11 条检查，个人信息和租户、批次、账号限定的经验只留在本地覆盖层。
 - **三份 AGENTS.md**：`resume/` 根目录的 AGENTS.md 不在仓库内，以 CareerWorkbench 仓库里的这份为同步源；改动要三处同步更新。
 - **自主合并授权**：CareerWorkbench 与 lapis-cv 的工作流或代码改动，AI 判断可以合并时，直接合并或推送 `main`，不再逐次请示。
   - 小改动在本地检查通过后（`npm run format:check`、`npm test`，涉及 agent/ 时加 pytest），可以直接提交并推送 `main`。
