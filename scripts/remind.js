@@ -20,8 +20,11 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '../..');
 const core = require('./reminder-core');
-const {parseCSV} = require('../dashboard/store');
-const FU = path.join(process.env.JOBHUNT_DATA_DIR || path.join(ROOT,'CareerWorkbench/dashboard'), 'follow_up.csv');
+const { parseCSV } = require('../dashboard/store');
+const FU = path.join(
+  process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard'),
+  'follow_up.csv'
+);
 const STATE = path.join(ROOT, 'CareerWorkbench/tmp/remind-state.json');
 const SECRET = path.join(ROOT, 'CareerWorkbench/data/private/secrets/serverchan.json');
 const LOG = path.join(ROOT, 'CareerWorkbench/logs/remind.log');
@@ -37,15 +40,25 @@ function logRun(line) {
 }
 
 // Parsing is shared with the transactional tracker; do not maintain a second CSV parser.
-function parseCsv(text) { return parseCSV(text).rows; }
-function collect(now = new Date()) { return core.collectEvents(parseCsv(fs.readFileSync(FU,'utf8')), now); }
+function parseCsv(text) {
+  return parseCSV(text).rows;
+}
+function collect(now = new Date()) {
+  return core.collectEvents(parseCsv(fs.readFileSync(FU, 'utf8')), now);
+}
 
 function fmtItem(it, withAt) {
-  const label = it.timing_kind==='固定安排'?'安排':it.timing_kind==='估算截止'?'参考截止':'截止';
-  const due = withAt ? `${label} ${it.atText}${it.assumed_time?'（仅日期，按当日结束提醒；非官方精确时刻）':''}` : (it.deadline || it.date || '时间未知');
-  const rel = it.diffH != null
-    ? (it.diffH < 0 ? `已过期 ${Math.abs(Math.round(it.diffH / 24 * 10) / 10)} 天` : `剩 ${Math.round(it.diffH)} 小时`)
-    : '';
+  const label =
+    it.timing_kind === '固定安排' ? '安排' : it.timing_kind === '估算截止' ? '参考截止' : '截止';
+  const due = withAt
+    ? `${label} ${it.atText}${it.assumed_time ? '（仅日期，按当日结束提醒；非官方精确时刻）' : ''}`
+    : it.deadline || it.date || '时间未知';
+  const rel =
+    it.diffH != null
+      ? it.diffH < 0
+        ? `已过期 ${Math.abs(Math.round((it.diffH / 24) * 10) / 10)} 天`
+        : `剩 ${Math.round(it.diffH)} 小时`
+      : '';
   return `· ${it.company} — ${it.event}\n    ${due}${rel ? '（' + rel + '）' : ''}${it.next ? '\n    下一步：' + it.next : ''}`;
 }
 
@@ -55,12 +68,12 @@ function buildText(r) {
   if (r.overdue.length) {
     L.push('');
     L.push(`⚠ 已过期未处理 ${r.overdue.length} 项：`);
-    r.overdue.forEach(it => L.push(fmtItem(it, true)));
+    r.overdue.forEach((it) => L.push(fmtItem(it, true)));
   }
   if (r.soon.length) {
     L.push('');
     L.push(`🔔 72 小时内到期 ${r.soon.length} 项：`);
-    r.soon.forEach(it => L.push(fmtItem(it, true)));
+    r.soon.forEach((it) => L.push(fmtItem(it, true)));
   }
   if (!r.overdue.length && !r.soon.length) {
     L.push('');
@@ -68,7 +81,9 @@ function buildText(r) {
   }
   if (r.noDeadline.length) {
     L.push('');
-    L.push(`（另有 ${r.noDeadline.length} 项无明确截止：${r.noDeadline.map(x => x.company).join('、')}）`);
+    L.push(
+      `（另有 ${r.noDeadline.length} 项无明确截止：${r.noDeadline.map((x) => x.company).join('、')}）`
+    );
   }
   return L.join('\n');
 }
@@ -82,7 +97,7 @@ $ErrorActionPreference='Stop'
 try {
   [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] | Out-Null
   [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType=WindowsRuntime] | Out-Null
-  $payload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${Buffer.from(JSON.stringify({title,message}),'utf8').toString('base64')}')) | ConvertFrom-Json
+  $payload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${Buffer.from(JSON.stringify({ title, message }), 'utf8').toString('base64')}')) | ConvertFrom-Json
   $t = [System.Security.SecurityElement]::Escape($payload.title)
   $m = [System.Security.SecurityElement]::Escape($payload.message)
   $xml = "<toast><visual><binding template='ToastGeneric'><text>$t</text><text>$m</text></binding></visual></toast>"
@@ -95,7 +110,7 @@ try {
   Write-Output ('TOAST_FAIL: ' + $_.Exception.Message)
 }
 `;
-  const tmp = path.join(ROOT, 'CareerWorkbench/tmp/_toast-'+process.pid+'.ps1');
+  const tmp = path.join(ROOT, 'CareerWorkbench/tmp/_toast-' + process.pid + '.ps1');
   // 必须带 UTF-8 BOM：Windows PowerShell 5.1 对无 BOM 的 .ps1 按 ANSI(GBK) 解码，
   // 中文会被拆成乱码并破坏字符串引号，导致 ParserError（实测踩过）。
   fs.writeFileSync(tmp, '\uFEFF' + ps, 'utf8');
@@ -104,13 +119,18 @@ try {
     // powershell.exe 是控制台子系统程序：即使宿主 node 已经隐藏，它自己仍会申请一个
     // 控制台窗口。有事项时用户会看到第二个黑窗（实测 2026-09-27）。两条都要给：
     // -WindowStyle Hidden 管窗口显示，windowsHide 管 CreateProcess 不新建控制台。
-    const out = execFileSync(shell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', tmp],
-      { encoding: 'utf8', timeout: 30000, windowsHide: true });
+    const out = execFileSync(
+      shell,
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', tmp],
+      { encoding: 'utf8', timeout: 30000, windowsHide: true }
+    );
     return out.trim();
   } catch (e) {
     return 'TOAST_ERR: ' + e.message;
   } finally {
-    try { fs.unlinkSync(tmp); } catch {}
+    try {
+      fs.unlinkSync(tmp);
+    } catch {}
   }
 }
 
@@ -121,7 +141,9 @@ function loadSendkey() {
     const cfg = JSON.parse(fs.readFileSync(SECRET, 'utf8'));
     const k = String(cfg.sendkey || '').trim();
     return k || null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // 微信每日发送预算：Server酱免费版实测每天上限 5 条（超出返回 code=40001
@@ -144,9 +166,16 @@ const WX_DAILY_LIMIT = 5;
 // （已过期 9 天、next_action 为空的事项，推了也不能改变什么），只在汇总里列出。
 const P = { CRITICAL: 100, HIGH: 80, MEDIUM: 60, ROUTINE: 40 };
 const CAP = { [P.CRITICAL]: 5, [P.HIGH]: 4, [P.MEDIUM]: 4, [P.ROUTINE]: 3 };
-const TIER_NAME = { [P.CRITICAL]: '紧急', [P.HIGH]: '重要', [P.MEDIUM]: '补救', [P.ROUTINE]: '例行' };
+const TIER_NAME = {
+  [P.CRITICAL]: '紧急',
+  [P.HIGH]: '重要',
+  [P.MEDIUM]: '补救',
+  [P.ROUTINE]: '例行',
+};
 function capFor(priority) {
-  const keys = Object.keys(CAP).map(Number).sort((a, b) => b - a);
+  const keys = Object.keys(CAP)
+    .map(Number)
+    .sort((a, b) => b - a);
   for (const k of keys) if (priority >= k) return CAP[k];
   return CAP[P.ROUTINE];
 }
@@ -161,24 +190,39 @@ function readQuota() {
   try {
     const q = JSON.parse(fs.readFileSync(WX_QUOTA_FILE, 'utf8'));
     if (q.date === todayKey()) {
-      if(!Number.isInteger(q.used)||q.used<0||!q.sent||typeof q.sent!=='object'||Array.isArray(q.sent)) throw new Error('Invalid quota state');
+      if (
+        !Number.isInteger(q.used) ||
+        q.used < 0 ||
+        !q.sent ||
+        typeof q.sent !== 'object' ||
+        Array.isArray(q.sent)
+      )
+        throw new Error('Invalid quota state');
       return q;
     }
-  } catch(e) { if(e.code!=='ENOENT') throw new Error('Quota state unreadable; sending stopped'); }
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw new Error('Quota state unreadable; sending stopped');
+  }
   return { date: todayKey(), used: 0, sent: {}, skipped: [] };
 }
 function atomicJson(file, value) {
-  fs.mkdirSync(path.dirname(file),{recursive:true});
-  const tmp=file+'.tmp-'+require('node:crypto').randomUUID();
-  try { fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8'); fs.renameSync(tmp,file); }
-  finally { if(fs.existsSync(tmp)) fs.unlinkSync(tmp); }
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = file + '.tmp-' + require('node:crypto').randomUUID();
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(value, null, 2), 'utf8');
+    fs.renameSync(tmp, file);
+  } finally {
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+  }
 }
-function writeQuota(q) { atomicJson(WX_QUOTA_FILE,q); }
+function writeQuota(q) {
+  atomicJson(WX_QUOTA_FILE, q);
+}
 // 记录因额度不足被丢弃的推送，便于事后发现"该提醒却没提醒"
 function recordSkip(q, title, reason) {
   if (!Array.isArray(q.skipped)) q.skipped = [];
   q.skipped.push({ at: new Date().toISOString(), title, reason });
-  q.skipped=q.skipped.slice(-50);
+  q.skipped = q.skipped.slice(-50);
   writeQuota(q);
 }
 
@@ -187,13 +231,13 @@ function recordSkip(q, title, reason) {
 // 会导致"登录检查"和"每日汇总"内容不同而重复推送、烧掉额度。
 // 因此用稳定签名：标题前缀 + 各事项的 公司|事件|绝对截止时间。
 function contentHash(title, desp, sig) {
-  const basis = sig || (title + '\n' + desp);
+  const basis = sig || title + '\n' + desp;
   return require('crypto').createHash('sha1').update(basis).digest('hex').slice(0, 16);
 }
 
 // 由提醒结果生成稳定签名
 function sigOf(r) {
-  const items = [...r.soon, ...r.overdue].map(x => `${x.company}|${x.event}|${x.atText}`).sort();
+  const items = [...r.soon, ...r.overdue].map((x) => `${x.company}|${x.event}|${x.atText}`).sort();
   return 'digest\n' + items.join('\n');
 }
 
@@ -206,7 +250,8 @@ function pushWechat(title, desp, sig, priority = P.ROUTINE) {
 
   if (q.sent[h]) return 'WECHAT_ALREADY_SENT';
   if (q.used >= cap) {
-    const why = `当天额度已用到 ${Math.min(q.used, cap)}/${WX_DAILY_LIMIT}，` +
+    const why =
+      `当天额度已用到 ${Math.min(q.used, cap)}/${WX_DAILY_LIMIT}，` +
       `${tier}级推送上限为 ${cap} 条（须给更高优先级留额度）`;
     if (!DRY_RUN) recordSkip(q, title, why);
     return `WECHAT_SKIP: ${why}，内容未推送`;
@@ -218,37 +263,51 @@ function pushWechat(title, desp, sig, priority = P.ROUTINE) {
   const key = loadSendkey();
   if (!key) return 'WECHAT_SKIP: 未配置凭据';
 
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const https = require('https');
     const body = new URLSearchParams({ title: title.slice(0, 32), desp }).toString();
-    const req = https.request({
-      hostname: 'sctapi.ftqq.com',
-      path: `/${encodeURIComponent(key)}.send`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) },
-      timeout: 30000,
-    }, res => {
-      let raw = '';
-      res.on('data', c => raw += c);
-      res.on('end', () => {
-        try {
-          const j = JSON.parse(raw);
-          if (j.code === 0 && j.data && j.data.errno === 0) {
-            // 只有真正发送成功才记账，失败不占用额度
-            q.used += 1; q.sent[h] = new Date().toISOString(); writeQuota(q);
-            resolve(`WECHAT_OK（今日已用 ${q.used}/${WX_DAILY_LIMIT}）`);          } else {
-            const err = `${j.message || ''} ${(j.data && j.data.error) || ''}`;
-            // 服务端说超额（40001）时，把本地计数直接拉满，避免后续每次运行都白打一次接口
-            if (String(j.code) === '40001' || /发送次数限制/.test(err)) {
-              q.used = WX_DAILY_LIMIT; writeQuota(q);
+    const req = https.request(
+      {
+        hostname: 'sctapi.ftqq.com',
+        path: `/${encodeURIComponent(key)}.send`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 30000,
+      },
+      (res) => {
+        let raw = '';
+        res.on('data', (c) => (raw += c));
+        res.on('end', () => {
+          try {
+            const j = JSON.parse(raw);
+            if (j.code === 0 && j.data && j.data.errno === 0) {
+              // 只有真正发送成功才记账，失败不占用额度
+              q.used += 1;
+              q.sent[h] = new Date().toISOString();
+              writeQuota(q);
+              resolve(`WECHAT_OK（今日已用 ${q.used}/${WX_DAILY_LIMIT}）`);
+            } else {
+              const err = `${j.message || ''} ${(j.data && j.data.error) || ''}`;
+              // 服务端说超额（40001）时，把本地计数直接拉满，避免后续每次运行都白打一次接口
+              if (String(j.code) === '40001' || /发送次数限制/.test(err)) {
+                q.used = WX_DAILY_LIMIT;
+                writeQuota(q);
+              }
+              resolve(`WECHAT_FAIL: code=${j.code} ${err.trim()}`);
             }
-            resolve(`WECHAT_FAIL: code=${j.code} ${err.trim()}`);
+          } catch {
+            resolve('WECHAT_FAIL: 响应无法解析');
           }
-        } catch { resolve('WECHAT_FAIL: 响应无法解析'); }
-      });
+        });
+      }
+    );
+    req.on('timeout', () => {
+      req.destroy(new Error('timeout'));
     });
-    req.on('timeout', () => { req.destroy(new Error('timeout')); });
-    req.on('error', e => resolve('WECHAT_FAIL: ' + e.message));
+    req.on('error', (e) => resolve('WECHAT_FAIL: ' + e.message));
     req.write(body);
     req.end();
   });
@@ -261,14 +320,18 @@ function buildWechatMarkdown(r) {
   const md = [];
   if (r.soon.length) {
     md.push('## 🔔 即将到期');
-    r.soon.forEach(x => md.push(
-      `**${x.company}** — ${x.event}\n\n> 截止 ${x.atText}（剩 ${Math.round(x.diffH)} 小时）` +
-      `${x.next ? '\n\n> 下一步：' + x.next : ''}`));
+    r.soon.forEach((x) =>
+      md.push(
+        `**${x.company}** — ${x.event}\n\n> 截止 ${x.atText}（剩 ${Math.round(x.diffH)} 小时）` +
+          `${x.next ? '\n\n> 下一步：' + x.next : ''}`
+      )
+    );
   }
   if (r.overdue.length) {
     md.push(`## ⚠ 已过期未处理（${r.overdue.length} 项）`);
-    r.overdue.slice(0, 8).forEach(x => md.push(
-      `**${x.company}** — ${x.event}\n\n> 截止 ${x.atText}`));
+    r.overdue
+      .slice(0, 8)
+      .forEach((x) => md.push(`**${x.company}** — ${x.event}\n\n> 截止 ${x.atText}`));
     if (r.overdue.length > 8) md.push(`…另有 ${r.overdue.length - 8} 项，见主表 follow_up.csv`);
   }
   return md.join('\n\n');
@@ -289,131 +352,206 @@ const args = process.argv.slice(2);
 // 只在每日汇总里列出（推了也改变不了结果，不值得占用额度）。
 // Each channel acknowledges only after its own successful delivery.
 async function runDue(wantWechat) {
-  const report=collect();
-  let state={};
-  try { state=JSON.parse(fs.readFileSync(STATE,'utf8')); }
-  catch(e) { if(e.code!=='ENOENT') throw new Error('Reminder state unreadable; kept unchanged'); }
-  const result=await core.deliverDue(report,state,{
-    channels:wantWechat?['wechat','toast']:['toast'],dryRun:DRY_RUN,now:new Date(),
-    persist:next=>atomicJson(STATE,next),
-    send:async(channel,group)=>{
-      const title=`${group.title}（${group.items.length} 项）`;
-      const text=group.items.map(it=>fmtItem(it,true)).join('\n\n');
-      const sig=`due-${group.id}\n`+group.items.map(it=>it.receipt_key).sort().join('\n');
-      if(channel==='wechat') return pushWechat(title,text,sig,group.priority);
-      return notify(title,group.items.map(it=>`${it.company}: ${it.event}`).join(' / '));
-    }
+  const report = collect();
+  let state = {};
+  try {
+    state = JSON.parse(fs.readFileSync(STATE, 'utf8'));
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw new Error('Reminder state unreadable; kept unchanged');
+  }
+  const result = await core.deliverDue(report, state, {
+    channels: wantWechat ? ['wechat', 'toast'] : ['toast'],
+    dryRun: DRY_RUN,
+    now: new Date(),
+    persist: (next) => atomicJson(STATE, next),
+    send: async (channel, group) => {
+      const title = `${group.title}（${group.items.length} 项）`;
+      const text = group.items.map((it) => fmtItem(it, true)).join('\n\n');
+      const sig =
+        `due-${group.id}\n` +
+        group.items
+          .map((it) => it.receipt_key)
+          .sort()
+          .join('\n');
+      if (channel === 'wechat') return pushWechat(title, text, sig, group.priority);
+      return notify(title, group.items.map((it) => `${it.company}: ${it.event}`).join(' / '));
+    },
   });
-  if(!result.results.length) console.log('【门槛提醒】无待发送事项。');
-  for(const item of result.results) console.log(`[${item.channel}] ${item.threshold}: ${item.count} 项 ${item.response}`);
-  if(!DRY_RUN) logRun('due: '+result.results.map(x=>`${x.channel}/${x.threshold}/${x.count}:${x.response}`).join('; '));
+  if (!result.results.length) console.log('【门槛提醒】无待发送事项。');
+  for (const item of result.results)
+    console.log(`[${item.channel}] ${item.threshold}: ${item.count} 项 ${item.response}`);
+  if (!DRY_RUN)
+    logRun(
+      'due: ' +
+        result.results.map((x) => `${x.channel}/${x.threshold}/${x.count}:${x.response}`).join('; ')
+    );
   return result;
 }
 
 async function runCli() {
-const WANT_WECHAT = args.includes('--wechat') || args.includes('--all');
-const WANT_TOAST = args.includes('--notify') || args.includes('--all');
+  const WANT_WECHAT = args.includes('--wechat') || args.includes('--all');
+  const WANT_TOAST = args.includes('--notify') || args.includes('--all');
 
-if (args.includes('--due')) { await runDue(WANT_WECHAT); return; }
-
-const r = collect();
-
-if (args.includes('--json')) {
-  console.log(JSON.stringify(r, null, 2));
-  return;
-}
-
-// --quota：查看今天微信额度使用与被跳过的推送（排查"该提醒却没提醒"）
-if (args.includes('--quota')) {
-  const q = readQuota();
-  console.log(`微信推送额度（${q.date}）：已用 ${q.used}/${WX_DAILY_LIMIT}`);
-  console.log('分档上限：紧急(2h)=5 重要(24h)=4 补救(已过期有动作)=4 例行(汇总)=3');
-  console.log('（例行被压低是为了把额度留给更紧急的档）');
-  const skipped = q.skipped || [];
-  if (skipped.length) {
-    console.log(`\n⚠ 当天被跳过的推送 ${skipped.length} 条：`);
-    skipped.forEach(s => console.log(`· ${s.title} —— ${s.reason}`));
-  } else {
-    console.log('\n没有被跳过的推送。');
+  if (args.includes('--due')) {
+    await runDue(WANT_WECHAT);
+    return;
   }
-  const sent = Object.keys(q.sent || {}).length;
-  console.log(`\n已成功推送内容数：${sent}`);
-  return;
-}
 
-const text = buildText(r);
-console.log(text);
+  const r = collect();
 
-const n = r.overdue.length + r.soon.length;
-let toastRes = '-', wxRes = '-';
-if (WANT_TOAST && !DRY_RUN) {
-  if (n === 0) {
-    console.log('\n[无到期事项，跳过桌面通知]');
-    toastRes = 'skip(无事项)';
-  } else {
-    const lines = [];
-    if (r.overdue.length) lines.push(`已过期 ${r.overdue.length} 项：` + r.overdue.map(x => x.company).join('、'));
-    if (r.soon.length) lines.push(`即将到期 ${r.soon.length} 项：` + r.soon.map(x => `${x.company}(${Math.round(x.diffH)}h)`).join('、'));
-    toastRes = notify('秋招提醒', lines.join(' / '));
-    console.log('\n[通知] ' + toastRes);
+  if (args.includes('--json')) {
+    console.log(JSON.stringify(r, null, 2));
+    return;
   }
-}
 
-if (WANT_WECHAT) {
-  if (n === 0) {
-    console.log('[微信] 无到期事项，跳过推送');
-    wxRes = 'skip(无事项)';
-  } else {
-    const parts = [];
-    if (r.soon.length) parts.push(`即将到期 ${r.soon.length} 项`);
-    if (r.overdue.length) parts.push(`已过期 ${r.overdue.length} 项`);
-    wxRes = await pushWechat(`秋招提醒：${parts.join('，')}`, buildWechatMarkdown(r), sigOf(r), P.ROUTINE);
-    console.log('[微信] ' + wxRes);
+  // --quota：查看今天微信额度使用与被跳过的推送（排查"该提醒却没提醒"）
+  if (args.includes('--quota')) {
+    const q = readQuota();
+    console.log(`微信推送额度（${q.date}）：已用 ${q.used}/${WX_DAILY_LIMIT}`);
+    console.log('分档上限：紧急(2h)=5 重要(24h)=4 补救(已过期有动作)=4 例行(汇总)=3');
+    console.log('（例行被压低是为了把额度留给更紧急的档）');
+    const skipped = q.skipped || [];
+    if (skipped.length) {
+      console.log(`\n⚠ 当天被跳过的推送 ${skipped.length} 条：`);
+      skipped.forEach((s) => console.log(`· ${s.title} —— ${s.reason}`));
+    } else {
+      console.log('\n没有被跳过的推送。');
+    }
+    const sent = Object.keys(q.sent || {}).length;
+    console.log(`\n已成功推送内容数：${sent}`);
+    return;
   }
-}
 
-if (!DRY_RUN && (WANT_TOAST || WANT_WECHAT)) logRun(`汇总: 过期=${r.overdue.length} 即将=${r.soon.length} toast=${toastRes} wx=${wxRes}`);
+  const text = buildText(r);
+  console.log(text);
 
-// 退出码：默认 0（计划任务不因"有过期项"被标记为失败）；--strict 时有过期项返回 1，
-// 供会话检查 / 脚本判断使用。放在异步流程末尾，避免提前 process.exit 掐断微信推送。
-process.exitCode = (args.includes('--strict') && r.overdue.length) ? 1 : 0;
+  const n = r.overdue.length + r.soon.length;
+  let toastRes = '-',
+    wxRes = '-';
+  if (WANT_TOAST && !DRY_RUN) {
+    if (n === 0) {
+      console.log('\n[无到期事项，跳过桌面通知]');
+      toastRes = 'skip(无事项)';
+    } else {
+      const lines = [];
+      if (r.overdue.length)
+        lines.push(`已过期 ${r.overdue.length} 项：` + r.overdue.map((x) => x.company).join('、'));
+      if (r.soon.length)
+        lines.push(
+          `即将到期 ${r.soon.length} 项：` +
+            r.soon.map((x) => `${x.company}(${Math.round(x.diffH)}h)`).join('、')
+        );
+      toastRes = notify('秋招提醒', lines.join(' / '));
+      console.log('\n[通知] ' + toastRes);
+    }
+  }
+
+  if (WANT_WECHAT) {
+    if (n === 0) {
+      console.log('[微信] 无到期事项，跳过推送');
+      wxRes = 'skip(无事项)';
+    } else {
+      const parts = [];
+      if (r.soon.length) parts.push(`即将到期 ${r.soon.length} 项`);
+      if (r.overdue.length) parts.push(`已过期 ${r.overdue.length} 项`);
+      wxRes = await pushWechat(
+        `秋招提醒：${parts.join('，')}`,
+        buildWechatMarkdown(r),
+        sigOf(r),
+        P.ROUTINE
+      );
+      console.log('[微信] ' + wxRes);
+    }
+  }
+
+  if (!DRY_RUN && (WANT_TOAST || WANT_WECHAT))
+    logRun(`汇总: 过期=${r.overdue.length} 即将=${r.soon.length} toast=${toastRes} wx=${wxRes}`);
+
+  // 退出码：默认 0（计划任务不因"有过期项"被标记为失败）；--strict 时有过期项返回 1，
+  // 供会话检查 / 脚本判断使用。放在异步流程末尾，避免提前 process.exit 掐断微信推送。
+  process.exitCode = args.includes('--strict') && r.overdue.length ? 1 : 0;
 }
 
 function acquireDeliveryLock() {
-  const file=path.join(ROOT,'CareerWorkbench/tmp/reminder-delivery.lock');
-  fs.mkdirSync(path.dirname(file),{recursive:true});
-  for(let attempt=0;attempt<2;attempt++) {
+  const file = path.join(ROOT, 'CareerWorkbench/tmp/reminder-delivery.lock');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const fd=fs.openSync(file,'wx');
-      try { fs.writeFileSync(fd,JSON.stringify({pid:process.pid}),'utf8'); }
-      finally { fs.closeSync(fd); }
-      return ()=>{ try { if(JSON.parse(fs.readFileSync(file,'utf8')).pid===process.pid) fs.unlinkSync(file); } catch {} };
-    } catch(e) {
-      if(e.code!=='EEXIST') throw e;
+      const fd = fs.openSync(file, 'wx');
+      try {
+        fs.writeFileSync(fd, JSON.stringify({ pid: process.pid }), 'utf8');
+      } finally {
+        fs.closeSync(fd);
+      }
+      return () => {
+        try {
+          if (JSON.parse(fs.readFileSync(file, 'utf8')).pid === process.pid) fs.unlinkSync(file);
+        } catch {}
+      };
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
       let owner;
-      try { owner=JSON.parse(fs.readFileSync(file,'utf8')); } catch { return null; }
-      if(!Number.isInteger(owner.pid) || owner.pid<=0) return null;
-      try { process.kill(owner.pid,0); return null; }
-      catch(err) { if(err.code!=='ESRCH') return null; }
+      try {
+        owner = JSON.parse(fs.readFileSync(file, 'utf8'));
+      } catch {
+        return null;
+      }
+      if (!Number.isInteger(owner.pid) || owner.pid <= 0) return null;
+      try {
+        process.kill(owner.pid, 0);
+        return null;
+      } catch (err) {
+        if (err.code !== 'ESRCH') return null;
+      }
       // Only a dead recorded owner permits recovery; never break a live lock.
-      try { fs.unlinkSync(file); } catch(err) { if(err.code!=='ENOENT') throw err; }
+      try {
+        fs.unlinkSync(file);
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+      }
     }
   }
   return null;
 }
 async function main() {
-  const allowed=new Set(['--notify','--wechat','--all','--due','--json','--quota','--strict','--dry-run']);
-  for(const flag of args) if(!allowed.has(flag)) throw new Error('Unknown reminder option');
-  if(args.includes('--json') && args.includes('--due')) {
-    const report=collect();
-    console.log(JSON.stringify({preview:true,groups:core.planDue(report,{},'toast')},null,2)); return;
+  const allowed = new Set([
+    '--notify',
+    '--wechat',
+    '--all',
+    '--due',
+    '--json',
+    '--quota',
+    '--strict',
+    '--dry-run',
+  ]);
+  for (const flag of args) if (!allowed.has(flag)) throw new Error('Unknown reminder option');
+  if (args.includes('--json') && args.includes('--due')) {
+    const report = collect();
+    console.log(
+      JSON.stringify({ preview: true, groups: core.planDue(report, {}, 'toast') }, null, 2)
+    );
+    return;
   }
-  const sends=!DRY_RUN && !args.includes('--json') && !args.includes('--quota') &&
-    args.some(f=>['--notify','--wechat','--all','--due'].includes(f));
-  if(!sends) return runCli();
-  const release=acquireDeliveryLock();
-  if(!release) { console.log('REMINDER_BUSY: another delivery is active; nothing acknowledged'); return; }
-  try { return await runCli(); } finally { release(); }
+  const sends =
+    !DRY_RUN &&
+    !args.includes('--json') &&
+    !args.includes('--quota') &&
+    args.some((f) => ['--notify', '--wechat', '--all', '--due'].includes(f));
+  if (!sends) return runCli();
+  const release = acquireDeliveryLock();
+  if (!release) {
+    console.log('REMINDER_BUSY: another delivery is active; nothing acknowledged');
+    return;
+  }
+  try {
+    return await runCli();
+  } finally {
+    release();
+  }
 }
-if(require.main===module) main().catch(e=>{console.error('REMINDER_ERROR: '+e.message);process.exitCode=1;});
-module.exports={collect,parseCsv,runDue,fmtItem,buildText,acquireDeliveryLock};
+if (require.main === module)
+  main().catch((e) => {
+    console.error('REMINDER_ERROR: ' + e.message);
+    process.exitCode = 1;
+  });
+module.exports = { collect, parseCsv, runDue, fmtItem, buildText, acquireDeliveryLock };

@@ -1,0 +1,11 @@
+# Only first-party JavaScript is formatted; everything else keeps its hand-written layout.
+*
+!*/
+!*.js
+!*.mjs
+!*.cjs
+node_modules/
+third_party/
+data/
+tmp/
+logs/
