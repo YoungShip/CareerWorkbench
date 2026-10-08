@@ -101,7 +101,7 @@ CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
 - **开工检查**：会话开始处理投递任务时，顺带运行 `git status -sb` 检查漂移；发现未提交的改动，先向本人说明再提交。
 - **红线**：
   - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交到 CareerWorkbench。
-  - 唯一例外是主表异地备份：八份 CSV 由 `scripts/backup-tracker.js` 每天打码后快照到私有的 `lapis-cv/tracker-backup/`，只提交该目录。备份打码链接里的专属参数和身份证号，不改主表本身；恢复以本机主表为准。
+  - 唯一例外是主表异地备份：八份 CSV 由 `scripts/backup-tracker.js` 每天打码后快照到私有的 `lapis-cv/tracker-backup/`，只提交该目录。备份前对测评链接、链接与正文里的凭据、账号和申请编号、联系方式和身份证号打码，再独立复查一遍，仍检出则不写入、不提交；不改主表本身，恢复以本机主表为准。
   - 推送前扫描 diff，确认不含证件号、测评专属链接和凭据。
   - lapis-cv 里的简历 PDF、求职档案等个人材料是否入库，由本人逐项决定，不默认提交。
 - **技能两处一致**：在 `.agents/skills` 改了技能，当次会话内运行 `npm run skills:capture` 收回 `CareerWorkbench/skills/` 并提交；预检的 `skills_source` 报告不一致时先处理。CareerWorkbench 是**公开仓库**（简历项目链接），收回的技能改动在提交前按第 11 条检查，个人信息和租户、批次、账号限定的经验只留在本地覆盖层。

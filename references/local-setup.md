@@ -58,7 +58,7 @@
 
 **tmp 清理**：每晚汇总和登录检查（`remind.js --all`）会顺带删除 `CareerWorkbench/tmp` 里超过 14 天的文件，提醒的三个状态文件不删，删除数量记在 `remind.log`。手动预览用 `node CareerWorkbench/scripts/clean-tmp.js`，加 `--apply` 才实际删除。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
 
-**主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 打码后写入 `lapis-cv/tracker-backup/`，只提交这个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在本地提交。
+**主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 打码后写入 `lapis-cv/tracker-backup/`（打码后再独立复查，仍检出测评链接、凭据、个人邮箱、手机号或身份证号时整次不写入，失败原因记入日志），只提交这个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在本地提交。
 
 ## 客户端接入
 
