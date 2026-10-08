@@ -102,6 +102,28 @@ def test_stale_generated_output_is_reported(material_workspace):
     assert "GENERATED_MATERIALS_OUTPUT_OUTDATED" in codes(inspect_materials(w.profile, w.project, check_pdf=False))
 
 
+@pytest.mark.parametrize("manifest_eol, checkout_eol", [(b"\r\n", b"\n"), (b"\n", b"\r\n"), (None, b"\r\n")])
+def test_generated_manifest_ignores_line_endings(material_workspace, manifest_eol, checkout_eol):
+    # Manifest hashed on one platform (None = LF-folded, as the generators now write it),
+    # files checked out with the other platform's line endings.
+    import hashlib
+    w = material_workspace
+    w.data["_生成管理"] = {"输出": ["秋招/output.txt"]}
+    w.save()
+    target = w.root / "秋招/output.txt"
+    lines = [b"line one", b"line two", b""]
+    def sha(eol): return hashlib.sha256((eol or b"\n").join(lines)).hexdigest()
+    target.write_bytes(checkout_eol.join(lines))
+    master = w.profile.read_bytes().replace(b"\r\n", b"\n")
+    w.profile.write_bytes(master.replace(b"\n", checkout_eol))
+    master_sha = hashlib.sha256(master.replace(b"\n", manifest_eol or b"\n")).hexdigest()
+    manifest = {"master_sha256": master_sha, "outputs": {"秋招/output.txt": sha(manifest_eol)}}
+    (w.profile.parent / "资料生成核验.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert inspect_materials(w.profile, w.project, check_pdf=False)["status"] == "passed"
+    target.write_bytes(checkout_eol.join([b"line one", b"edited", b""]))
+    assert "GENERATED_MATERIALS_OUTPUT_OUTDATED" in codes(inspect_materials(w.profile, w.project, check_pdf=False))
+
+
 def test_derived_workflow_view_and_source_drift_is_reported(material_workspace):
     w = material_workspace
     file = Path(__file__).resolve().parents[2] / "scripts/generate-workflow-views.py"

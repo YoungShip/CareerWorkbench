@@ -7,7 +7,8 @@ import os
 from uuid import uuid4
 
 
-def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+# Hash with CRLF folded to LF so the manifest does not depend on the checkout platform.
+def digest(path): return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def atomic(path, value):
@@ -26,7 +27,7 @@ def generate(workspace):
     rules_path = workspace / "lapis-cv/秋招/求职档案.md"
     master_bytes = master_path.read_bytes()
     data = json.loads(master_bytes.decode("utf-8-sig"))
-    master_hash, rules_hash = hashlib.sha256(master_bytes).hexdigest(), digest(rules_path)
+    master_hash, rules_hash = hashlib.sha256(master_bytes.replace(b"\r\n", b"\n")).hexdigest(), digest(rules_path)
     header = (f"> 自动生成的只读参考；事实唯一来源：[网申母表]({master_path.as_posix()})。\n"
               f"> 当前选岗与经历边界：[求职档案]({rules_path.as_posix()})。\n"
               f"> 来源版本：{data.get('_版本')}；母表 SHA256：{master_hash}。\n\n")

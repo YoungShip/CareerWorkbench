@@ -50,3 +50,29 @@ node dashboard/tracker-cli.js brief
 | 到期提醒、主表备份、tmp 清理 | 不能：依赖 Windows 计划任务 | 自动运行 |
 
 云端会话通过 Remote Desktop Commander 操作作者电脑的规则见 AGENTS.md 第 14 条，本机路径、端口和设备见 [local-setup.md](local-setup.md)。
+
+## 只连 GitHub 的云端会话
+
+**先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/lapis-cv`：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。
+
+**搭环境。** 两个仓库克隆到同一个父目录（相当于 `resume/`），按上面的命令安装。Python 测试在仓库根目录运行 `uv run --project agent pytest agent/tests`。要看投递进度时，按上一节从 `tracker-backup/` 恢复主表。
+
+**本机路径换算。** `求职档案.md`、`tracker-cli.js rules` 的输出等处的链接写的是本机绝对路径。把开头的 `D:/AppData/Documents/resume/` 换成云端的工作区根即可，例如 `D:/AppData/Documents/resume/lapis-cv/秋招/X.md` 对应 `<工作区根>/lapis-cv/秋招/X.md`。指向 `CareerWorkbench/tmp/`、`data/private/` 的链接在云端不存在。
+
+**AGENTS.md 规则在云端的适用范围：**
+
+| 规则 | 云端 |
+|---|---|
+| 第 1、3、4、6、10、12 条 | 照常适用 |
+| 第 2 条主表 | 只读：从备份恢复后只用 `brief`、`query`、`rules`、`validate`，不 `apply` |
+| 第 5 条 | OfferNotes 同步做不了；公司调研占用表照常认领 |
+| 第 9 条到期提醒 | 只做第 ① 项：用恢复的主表跑 `brief`，说明数据最多晚一天 |
+| 第 11 条站点经验 | 本地观察在 `data/private/site-knowledge/`，不入库，云端读不到；只用技能里的通用 `site-knowledge.md`，抓目录时按现场页面核实 |
+| 第 13 条仓库同步 | 适用；调研产物见下 |
+| 第 0、7、8、14 条，`local-setup.md` | 不适用：依赖作者电脑的浏览器登录态或本机 |
+
+**调研产物放哪里。** 报告沿用 `lapis-cv/秋招/<日期>-<公司>岗位比较.md`；原始目录、JD 快照、候选人证据、matching 和 pipeline 输出放在 `lapis-cv/秋招/<公司>-2027校招-<日期>/`。云端本地目录在会话结束后会消失，所以都要提交。提交到新分支并开 PR，经本人或 AI 审核后合并；同时更新 `公司调研占用表.md`。
+
+**逐岗匹配没有模型密钥时。** `jobmatch research` 需要私有的模型配置，云端通常没有。这时由当前 AI 按 [matching-record.md](../skills/campus-recruitment/references/matching-record.md) 直接写 raw 记录，原样保存后运行 `python skills/campus-recruitment/scripts/run-matching-pipeline.py --raw <raw.json> --run-dir <目录>/pipeline`，结果同样以 `checks` 和 `readiness` 为准。`coverage.human_attested` 留给本人确认，流程见 matching-record.md 第 1 节。
+
+**资料检查。** `jobmatch check-materials` 比较生成核验清单的哈希时不区分 CRLF 和 LF，云端检出不会被误报为过期。`lapis-cv/scripts/generate_application_materials.py` 在云端也能运行：缺少 `私密信息.json` 时改为按号码格式扫描输出里的身份证号。

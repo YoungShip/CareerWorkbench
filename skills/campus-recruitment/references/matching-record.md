@@ -30,6 +30,13 @@ positions[]
 
 当 `capture_status=complete` 时，必须提供官方总数、最后一页/API 穷尽证据，并由人工确认 `human_attested=true`。校验器最多报告 `attested_not_independently_proven`，不会把它升级成“官网全量已被自动证明”。
 
+`human_attested` 只能由用户确认后设置，AI 不得自行写 `true`：
+
+1. AI 保存目录快照，填 `capture_status`、`official_total`、`last_page_reached`，`human_attested` 先写 `false`；
+2. 运行校验器，此时 `COVERAGE_HUMAN_ATTESTATION_MISSING` 是预期的 warning：已核实岗位可以展示，但不能生成全量比较或登记；
+3. 在报告里列出供用户核对的证据：官方总数的出处（页面显示或 API 的 total 字段）、最后一页或 API 翻页结束的依据、目录条数与范围内条数；
+4. 用户明确确认“已抓全”后，才把 `human_attested` 改为 `true` 并重跑校验器。用户的确认原话或出处记在报告里。
+
 ## 2. Raw catalog identity contract
 
 不能根据扩展名猜字段，也不能用标题模糊匹配岗位身份。必须显式声明原始数据格式和 ID 提取方式：
@@ -62,6 +69,14 @@ positions[]
 如果身份无法可靠提取，报告必须是 `unverifiable`，退出码非零，不得仅给 warning 后宣称通过。原始快照和 `catalog_index` 的 ID 集合必须分别核对缺失、多余和重复项；数量相同不能替代身份对账。任一侧出现重复 ID 都会阻断目录对账，即使去重后的集合和数量看起来相同；损坏/不支持的输入标记为 `invalid`，缺少可靠提取规则或 ID 缺失标记为 `unverifiable`。
 
 ## 3. Scope semantics
+
+`catalog_index[]` 每个条目必填非空 `id`、`title` 和布尔 `in_scope`；可选 `city`、`url`，必须是字符串。`in_scope=false` 的条目必须写非空字符串 `exclusion`，说明为什么不在本次研究范围（例如“实习岗”“地点不在江浙沪”“博士专项”），否则报 `CATALOG_SCOPE_REASON_MISSING`：
+
+```json
+{"id": "role-2", "title": "算法实习生", "city": "上海", "in_scope": false, "exclusion": "实习岗，不在本次校招范围"}
+```
+
+两个排除字段不要混用：`catalog_index[].exclusion` 是读 JD 之前的范围筛选理由；`positions[].exclusion_reason` 是范围内岗位读完 JD 后的排除依据。
 
 - `catalog_index[].in_scope` 表示岗位是否属于本次研究范围，不表示候选人是否适合。
 - 范围内岗位可以在完整要求核对后 `excluded=true`，但必须写 `exclusion_reason`；例如明确硬条件不满足或用户偏好排除。

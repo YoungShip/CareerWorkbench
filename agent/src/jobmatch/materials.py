@@ -12,6 +12,14 @@ def file_sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha_matches(expected, path: Path) -> bool:
+    # Generators hash text with CRLF folded to LF; older manifests hold the raw hash of a
+    # Windows (CRLF) or Linux (LF) checkout. Accept all three so line endings alone never fail.
+    raw = path.read_bytes()
+    lf = raw.replace(b"\r\n", b"\n")
+    return expected in {hashlib.sha256(form).hexdigest() for form in (raw, lf, lf.replace(b"\n", b"\r\n"))}
+
+
 def normalized_text(text: str) -> str:
     # Layout only. Do not normalize radicals, ligatures or other Unicode characters.
     return re.sub(r"[\s\ue000-\uf8ff•·]", "", text)
@@ -155,10 +163,10 @@ def inspect_materials(profile_json: Path, project: Path, *, check_pdf=True) -> d
         else:
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-                if manifest.get("master_sha256") != file_sha(profile_json): fail("GENERATED_MATERIALS_SOURCE_OUTDATED")
+                if not sha_matches(manifest.get("master_sha256"), profile_json): fail("GENERATED_MATERIALS_SOURCE_OUTDATED")
                 for name in output_names:
                     target = local_file(name)
-                    if target is None or not target.is_file() or manifest.get("outputs", {}).get(name) != file_sha(target):
+                    if target is None or not target.is_file() or not sha_matches(manifest.get("outputs", {}).get(name), target):
                         fail("GENERATED_MATERIALS_OUTPUT_OUTDATED", file=Path(name).name)
             except (ValueError, OSError): fail("GENERATED_MATERIALS_MANIFEST_INVALID")
     views_manifest = project / "data/private/workflow-views-manifest.json"
@@ -168,12 +176,12 @@ def inspect_materials(profile_json: Path, project: Path, *, check_pdf=True) -> d
         else:
             try:
                 view = json.loads(views_manifest.read_text(encoding="utf-8-sig"))
-                if view.get("master_sha256") != file_sha(profile_json): fail("WORKFLOW_VIEWS_SOURCE_OUTDATED")
+                if not sha_matches(view.get("master_sha256"), profile_json): fail("WORKFLOW_VIEWS_SOURCE_OUTDATED")
                 rules_path = profile_json.parent / "求职档案.md"
-                if rules_path.is_file() and view.get("rules_sha256") != file_sha(rules_path): fail("WORKFLOW_VIEWS_RULES_OUTDATED")
+                if rules_path.is_file() and not sha_matches(view.get("rules_sha256"), rules_path): fail("WORKFLOW_VIEWS_RULES_OUTDATED")
                 for name in view_names:
                     target = project / name
-                    if not target.is_file() or view.get("outputs", {}).get(name) != file_sha(target):
+                    if not target.is_file() or not sha_matches(view.get("outputs", {}).get(name), target):
                         fail("WORKFLOW_VIEW_OUTDATED", file=name)
             except (ValueError, OSError): fail("WORKFLOW_VIEWS_MANIFEST_INVALID")
     extra = project / "data/private/agent-corpus/extra-evidence.md"
