@@ -547,10 +547,8 @@ async function main() {
     return await runCli();
   } finally {
     release();
-    if (args.includes('--all')) {
-      cleanupTmp();
-      startTrackerBackup();
-    }
+    // tmp 自动清理已停用：tmp 里有投递记录和调研报告引用的证据，按修改时间删除会丢证据
+    if (args.includes('--all')) startTrackerBackup();
   }
 }
 // 每晚汇总和登录检查顺带把主表快照备份到 lapis-cv 并推送。推送可能慢，
@@ -566,15 +564,6 @@ function startTrackerBackup() {
       .unref();
   } catch (e) {
     logRun('主表备份启动失败：' + e.message);
-  }
-}
-// 每晚汇总和登录检查顺带清理 tmp 里超过 14 天的临时文件；失败只记日志，不影响提醒
-function cleanupTmp() {
-  try {
-    const r = require('./clean-tmp').cleanTmp({ apply: true });
-    if (r.removed) logRun(`tmp 清理：删除 ${r.removed} 个过期文件`);
-  } catch (e) {
-    logRun('tmp 清理失败：' + e.message);
   }
 }
 if (require.main === module)
