@@ -262,3 +262,50 @@ test('corrupt v2 receipts fail closed instead of being treated as fresh state', 
     assert.throws(() => core.normalizeState(state));
   }
 });
+
+test('open jobs with a deadline become reminder events; closed jobs and covered dates do not', () => {
+  const jobs = [
+    {
+      job_id: 'p1',
+      company: '甲',
+      job_title: 'A岗',
+      status: 'Pending',
+      match_grade: 'A',
+      deadline: '2026-09-21',
+    },
+    {
+      job_id: 'p2',
+      company: '乙',
+      job_title: 'B岗',
+      status: 'Deferred',
+      deadline: '2026/9/25 18:00（官方）',
+    },
+    {
+      job_id: 'p3',
+      company: '丙',
+      job_title: 'C岗',
+      status: 'Pending',
+      deadline: '2026-09-21（简历接收截止）',
+    },
+    { job_id: 's1', company: '丁', job_title: '已投', status: 'Submitted', deadline: '2026-09-21' },
+    { job_id: 'n1', company: '戊', job_title: '无日期', status: 'Pending', deadline: '滚动招聘' },
+  ];
+  const events = [event({ job_id: 'p3', deadline: '2026-09-21 10:00' })];
+  const extra = core.jobDeadlineEvents(jobs, events);
+  assert.deepEqual(
+    extra.map((e) => [e.job_id, e.deadline]),
+    [
+      ['p1', '2026-09-21'],
+      ['p2', '2026-09-25 18:00'],
+    ]
+  );
+  const r = core.collectEvents([...events, ...extra], now);
+  const p1 = r.soon.find((x) => x.job_id === 'p1');
+  assert.equal(p1.atText.startsWith('2026/9/21 23:59'), true);
+  assert.match(p1.next, /当前 Pending，档位 A/);
+  assert.equal(
+    core.planDue(core.collectEvents(extra, new Date('2026-09-21T22:00:00+08:00')), {}, 'toast')[0]
+      .id,
+    '2h'
+  );
+});

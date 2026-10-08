@@ -47,7 +47,7 @@ node dashboard/tracker-cli.js brief
 | 查看投递进度 | 能，读 `tracker-backup/`（最多晚一天） | 能，读实时主表 |
 | 写入主表（登记投递、更新阶段） | 不建议，会和作者电脑分叉 | 能 |
 | 网申填写与提交、OfferNotes 同步 | 不能：登录态在作者电脑的专用浏览器 profile 里 | 能，按 AGENTS.md 第 0、7、8 条 |
-| 到期提醒、主表备份、tmp 清理 | 不能：依赖 Windows 计划任务 | 自动运行 |
+| 到期提醒、主表备份 | 不能：依赖 Windows 计划任务 | 自动运行 |
 
 云端会话通过 Remote Desktop Commander 操作作者电脑的规则见 AGENTS.md 第 14 条，本机路径、端口和设备见 [local-setup.md](local-setup.md)。
 

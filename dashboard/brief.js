@@ -1,7 +1,7 @@
 /* Read-only action summary. A policy finding is a review request, never a write plan. */
 'use strict';
 const crypto = require('node:crypto');
-const { collectEvents } = require('../scripts/reminder-core');
+const { collectEvents, jobDeadlineEvents } = require('../scripts/reminder-core');
 function currentSection(text, heading = '选岗规则') {
   const lines = String(text)
     .replace(/^\uFEFF/, '')
@@ -57,7 +57,10 @@ function buildBrief(
     throw Error('limit must be an integer from 1 to 100');
   const tables = snapshot.tables,
     jobs = tables.job_pool,
-    report = collectEvents(tables.follow_up, now);
+    report = collectEvents(
+      [...tables.follow_up, ...jobDeadlineEvents(jobs, tables.follow_up)],
+      now
+    );
   const active = checkPolicy(policy, policyText),
     findings = [];
   for (const job of jobs)

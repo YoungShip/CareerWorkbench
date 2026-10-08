@@ -21,10 +21,9 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const core = require('./reminder-core');
 const { parseCSV } = require('../dashboard/store');
-const FU = path.join(
-  process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard'),
-  'follow_up.csv'
-);
+const DATA = process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard');
+const FU = path.join(DATA, 'follow_up.csv');
+const JOBS = path.join(DATA, 'job_pool.csv');
 const STATE = path.join(ROOT, 'CareerWorkbench/tmp/remind-state.json');
 const SECRET = path.join(ROOT, 'CareerWorkbench/data/private/secrets/serverchan.json');
 const LOG = path.join(ROOT, 'CareerWorkbench/logs/remind.log');
@@ -44,7 +43,13 @@ function parseCsv(text) {
   return parseCSV(text).rows;
 }
 function collect(now = new Date()) {
-  return core.collectEvents(parseCsv(fs.readFileSync(FU, 'utf8')), now);
+  const events = parseCsv(fs.readFileSync(FU, 'utf8'));
+  // 待投岗位的网申截止一起提醒；job_pool 读不到时只用日程，不影响原有提醒
+  let jobs = [];
+  try {
+    jobs = parseCsv(fs.readFileSync(JOBS, 'utf8'));
+  } catch {}
+  return core.collectEvents([...events, ...core.jobDeadlineEvents(jobs, events)], now);
 }
 
 function fmtItem(it, withAt) {
@@ -263,9 +268,53 @@ function pushWechat(title, desp, sig, priority = P.ROUTINE) {
   const key = loadSendkey();
   if (!key) return 'WECHAT_SKIP: 未配置凭据';
 
+  const body = new URLSearchParams({ title: title.slice(0, 32), desp }).toString();
+  const handle = (raw, route) => {
+    const via = route === 'proxy' ? '，经代理' : '';
+    try {
+      const j = JSON.parse(raw);
+      if (j.code === 0 && j.data && j.data.errno === 0) {
+        // 只有真正发送成功才记账，失败不占用额度
+        q.used += 1;
+        q.sent[h] = new Date().toISOString();
+        writeQuota(q);
+        return `WECHAT_OK（今日已用 ${q.used}/${WX_DAILY_LIMIT}${via}）`;
+      }
+      const err = `${j.message || ''} ${(j.data && j.data.error) || ''}`;
+      // 服务端说超额（40001）时，把本地计数直接拉满，避免后续每次运行都白打一次接口
+      if (String(j.code) === '40001' || /发送次数限制/.test(err)) {
+        q.used = WX_DAILY_LIMIT;
+        writeQuota(q);
+      }
+      return `WECHAT_FAIL: code=${j.code} ${err.trim()}`;
+    } catch {
+      return 'WECHAT_FAIL: 响应无法解析';
+    }
+  };
+  // Server酱是国内服务：先直连（不读环境代理设置），本机代理没开时也能送达；
+  // 只有连接都没建立起来时才按环境代理重试一次，已发出的请求不重试，避免重复推送
+  return postForm(key, body, true).then(({ raw, error }) => {
+    if (raw !== undefined) return handle(raw, 'direct');
+    if (!NOT_CONNECTED.has(error.code)) return 'WECHAT_FAIL: ' + error.message;
+    return postForm(key, body, false).then((retry) =>
+      retry.raw !== undefined
+        ? handle(retry.raw, 'proxy')
+        : `WECHAT_FAIL: 直连 ${error.code}；按环境代理重试 ${retry.error.message}`
+    );
+  });
+}
+
+const NOT_CONNECTED = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+]);
+// direct=true 时给请求一个独立的 Agent，不经过 NODE_USE_ENV_PROXY 打开的环境代理
+function postForm(key, body, direct) {
+  const https = require('https');
   return new Promise((resolve) => {
-    const https = require('https');
-    const body = new URLSearchParams({ title: title.slice(0, 32), desp }).toString();
     const req = https.request(
       {
         hostname: 'sctapi.ftqq.com',
@@ -276,38 +325,16 @@ function pushWechat(title, desp, sig, priority = P.ROUTINE) {
           'Content-Length': Buffer.byteLength(body),
         },
         timeout: 30000,
+        ...(direct ? { agent: new https.Agent() } : {}),
       },
       (res) => {
         let raw = '';
         res.on('data', (c) => (raw += c));
-        res.on('end', () => {
-          try {
-            const j = JSON.parse(raw);
-            if (j.code === 0 && j.data && j.data.errno === 0) {
-              // 只有真正发送成功才记账，失败不占用额度
-              q.used += 1;
-              q.sent[h] = new Date().toISOString();
-              writeQuota(q);
-              resolve(`WECHAT_OK（今日已用 ${q.used}/${WX_DAILY_LIMIT}）`);
-            } else {
-              const err = `${j.message || ''} ${(j.data && j.data.error) || ''}`;
-              // 服务端说超额（40001）时，把本地计数直接拉满，避免后续每次运行都白打一次接口
-              if (String(j.code) === '40001' || /发送次数限制/.test(err)) {
-                q.used = WX_DAILY_LIMIT;
-                writeQuota(q);
-              }
-              resolve(`WECHAT_FAIL: code=${j.code} ${err.trim()}`);
-            }
-          } catch {
-            resolve('WECHAT_FAIL: 响应无法解析');
-          }
-        });
+        res.on('end', () => resolve({ raw }));
       }
     );
-    req.on('timeout', () => {
-      req.destroy(new Error('timeout'));
-    });
-    req.on('error', (e) => resolve('WECHAT_FAIL: ' + e.message));
+    req.on('timeout', () => req.destroy(Object.assign(new Error('timeout'), { code: 'TIMEOUT' })));
+    req.on('error', (error) => resolve({ error }));
     req.write(body);
     req.end();
   });
@@ -571,4 +598,4 @@ if (require.main === module)
     console.error('REMINDER_ERROR: ' + e.message);
     process.exitCode = 1;
   });
-module.exports = { collect, parseCsv, runDue, fmtItem, buildText, acquireDeliveryLock };
+module.exports = { collect, parseCsv, runDue, fmtItem, buildText, acquireDeliveryLock, pushWechat };

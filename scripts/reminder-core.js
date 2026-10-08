@@ -87,6 +87,41 @@ function collectEvents(events, now = new Date()) {
     result[key].sort((a, b) => a.remaining_ms - b.remaining_ms);
   return result;
 }
+// 待投岗位的网申截止只写在 job_pool.deadline（自由文本，如“2026-10-25（简历接收截止）”），
+// 不在 follow_up 里。取开头的日期转成截止事项，与日程一起参与摘要和提醒；已有同日日程的岗位不重复
+const OPEN_JOB = new Set(['Pending', 'Deferred', 'Blocked']);
+function jobDeadlineEvents(jobs = [], events = []) {
+  const covered = new Set(
+    events
+      .filter((e) => !done(e))
+      .map((e) => e.job_id + '|' + String(e.deadline || e.date || '').slice(0, 10))
+  );
+  const out = [];
+  for (const job of jobs) {
+    if (!OPEN_JOB.has(job.status)) continue;
+    const m = String(job.deadline || '').match(
+      /^\s*(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?(?:\s*([01]?\d|2[0-3]):([0-5]\d))?/
+    );
+    if (!m) continue;
+    const date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    if (covered.has(job.job_id + '|' + date)) continue;
+    const time = m[4] ? `${m[4].padStart(2, '0')}:${m[5]}` : '';
+    out.push({
+      event_id: 'job-deadline:' + job.job_id,
+      job_id: job.job_id,
+      company: job.company,
+      job_title: job.job_title,
+      event_type: '网申截止（待投岗位）',
+      date,
+      time,
+      deadline: time ? `${date} ${time}` : date,
+      next_action: `截止前投递，或改为 Skipped/Deferred（当前 ${job.status}，档位 ${job.match_grade || '未评'}）`,
+      status: '',
+      stage_status: '',
+    });
+  }
+  return out;
+}
 function receiptKey(item, threshold) {
   return crypto
     .createHash('sha256')
@@ -195,6 +230,7 @@ async function deliverDue(report, inputState, options) {
   return { state, results };
 }
 module.exports = {
+  jobDeadlineEvents,
   HOUR,
   PRIORITY,
   THRESHOLDS,

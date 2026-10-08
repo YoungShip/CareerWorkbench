@@ -118,3 +118,12 @@ test('brief includes near-deadline discovery signals without turning them into a
   assert.match(r.next_steps.join('\n'), /临近截止/);
   assert.equal(r.requires_user_confirmation, true);
 });
+
+test('brief lists application deadlines of Pending jobs as urgent', () => {
+  const s = snap();
+  s.tables.job_pool[0].deadline = '2026-09-21（官方公告）';
+  const brief = buildBrief(s, { policy, policyText: text, now });
+  const item = brief.urgent.items.find((x) => x.job_id === 'j1');
+  assert.ok(item, JSON.stringify(brief.urgent));
+  assert.equal(item.event, '网申截止（待投岗位）');
+});

@@ -45,18 +45,19 @@
 - 每小时门槛检查：跨过 24h、2h 门槛或刚过期时各提醒一次，同一门槛不重复；
 - 登录时检查。
 
-脚本只读 `follow_up.csv`，不写主表。门槛去重状态在 `CareerWorkbench/tmp/remind-state.json`。
+脚本只读 `follow_up.csv` 的日程，以及 `job_pool.csv` 里待投、暂缓、受阻岗位 `deadline` 字段开头的日期（当作“网申截止”事项，同日已有日程的不重复），不写主表。门槛去重状态在 `CareerWorkbench/tmp/remind-state.json`。
 
 **③ 微信推送（Server酱）**：
 - 凭据在 `CareerWorkbench/data/private/secrets/serverchan.json`，说明见同目录 `README.md`。
 - 免费版每天上限 5 条，超出时返回 `code=40001`。本地每天最多发 5 条，以保护预算；实际限制以服务端响应为准。
 - 各档上限：紧急（2h 内）5 条，重要（24h 内）4 条，补救（已过期但有 next_action）4 条，例行（汇总、登录检查）3 条。同一档的多个事项合并成一条。
 - 发送互斥串行，服务端确认成功才记账。dry-run 不发送、不记已提醒、不读密钥。
+- Server酱是国内服务，先直连；连接都没建立（如本机代理没开导致 `ECONNREFUSED`）时才按环境代理重试一次，成功时日志注明“经代理”。
 - 另有内容去重、服务端 40001 兜底和跳过记录，用 `node CareerWorkbench/scripts/remind.js --quota` 查看。
 
 运行记录在 `CareerWorkbench/logs/remind.log`，只记结果和计数，不记凭据。
 
-**tmp 清理**：每晚汇总和登录检查（`remind.js --all`）会顺带删除 `CareerWorkbench/tmp` 里超过 14 天的文件，提醒的三个状态文件不删，删除数量记在 `remind.log`。手动预览用 `node CareerWorkbench/scripts/clean-tmp.js`，加 `--apply` 才实际删除。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
+**tmp 清理**：不再自动运行（2026-10-08 停用：tmp 里有主表和调研报告引用的证据，按修改时间删除会丢证据）。需要时手动预览 `node CareerWorkbench/scripts/clean-tmp.js`，确认没有被引用的文件后才加 `--apply`。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
 
 **主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 打码后写入 `lapis-cv/tracker-backup/`（打码后再独立复查，仍检出测评链接、凭据、个人邮箱、手机号或身份证号时整次不写入，失败原因记入日志），只提交这个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在本地提交。
 
