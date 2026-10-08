@@ -1199,9 +1199,9 @@ def invalid_input_report(message: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 2 or sys.argv[1].startswith("-"):
         print("usage: python -X utf8 verify-matching.py <matching.json>")
-        return 2
+        return 0 if sys.argv[1:] in (["-h"], ["--help"]) else 2
     path = Path(sys.argv[1]).resolve()
     data, error = read_json(path)
     if error:
