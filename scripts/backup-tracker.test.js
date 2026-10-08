@@ -149,13 +149,9 @@ test('findLeaks flags what redaction must never let through', () => {
   assert.deepEqual(findLeaks('https://jobs.example.com/position/13912345678/detail'), []);
 });
 
-test('backup commits only tracker-backup and is a no-op when nothing changed', (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+function trackerData(root, row = {}) {
   const data = path.join(root, 'data');
-  const repo = path.join(root, 'repo');
-  const store = createStore(data);
-  store.initialize({
+  createStore(data).initialize({
     job_pool: [
       {
         job_id: 'j1',
@@ -163,48 +159,22 @@ test('backup commits only tracker-backup and is a no-op when nothing changed', (
         job_title: 'T',
         status: 'Pending',
         job_url: 'https://x/?token=abc',
+        ...row,
       },
     ],
     application_log: [],
     follow_up: [],
     sync_queue: [],
   });
-  const git = (...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8' });
-  fs.mkdirSync(repo);
-  git('init', '-q');
-  git('config', 'user.email', 't@example.com');
-  git('config', 'user.name', 't');
-  fs.writeFileSync(path.join(repo, 'unrelated.txt'), 'wip');
-  git('add', 'unrelated.txt'); // staged work that must not be swept into the backup commit
-
-  const first = backup({ data, repo });
-  assert.equal(first.committed, true);
-  const files = git('show', '--name-only', '--format=', 'HEAD').trim().split('\n');
-  assert.ok(
-    files.every((f) => f.startsWith('tracker-backup/')),
-    files.join(',')
-  );
-  assert.ok(files.includes('tracker-backup/job_pool.csv'));
-  const saved = fs.readFileSync(path.join(repo, 'tracker-backup/job_pool.csv'), 'utf8');
-  assert.match(saved, /token=REDACTED/);
-  assert.match(git('status', '--short'), /^A  unrelated\.txt/m);
-
-  assert.equal(backup({ data, repo }).committed, false);
-});
-
-test('backup skips quietly when the backup repository is missing', () => {
-  const r = backup({ repo: path.join(os.tmpdir(), 'cw-no-such-repo-' + process.pid) });
-  assert.match(r.skipped, /not found/);
-});
-
-test('backup push first replays local commits on top of newer remote commits', (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-remote-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const sh = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' });
-  const ident = (cwd) => {
-    sh(cwd, 'config', 'user.email', 't@example.com');
-    sh(cwd, 'config', 'user.name', 't');
-  };
+  return data;
+}
+const sh = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' });
+function ident(cwd) {
+  sh(cwd, 'config', 'user.email', 't@example.com');
+  sh(cwd, 'config', 'user.name', 't');
+}
+// origin（裸仓库）+ 本人的 lapis-cv 克隆
+function remoteSetup(root) {
   const origin = path.join(root, 'origin.git');
   sh(root, 'init', '-q', '--bare', '-b', 'main', origin);
   const mine = path.join(root, 'mine');
@@ -215,30 +185,125 @@ test('backup push first replays local commits on top of newer remote commits', (
   sh(mine, 'add', 'README.md');
   sh(mine, 'commit', '-q', '-m', 'init');
   sh(mine, 'push', '-q', '-u', 'origin', 'main');
-  // another tool pushes research to the same repository
+  return { origin, mine };
+}
+
+test('backup commits only tracker-backup in its own worktree and leaves the user tree alone', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = trackerData(root);
+  const repo = path.join(root, 'repo'),
+    worktree = path.join(root, 'wt');
+  fs.mkdirSync(repo);
+  sh(repo, 'init', '-q');
+  ident(repo);
+  fs.writeFileSync(path.join(repo, 'README.md'), 'cv');
+  sh(repo, 'add', 'README.md');
+  sh(repo, 'commit', '-q', '-m', 'init');
+  fs.writeFileSync(path.join(repo, 'unrelated.txt'), 'wip');
+  sh(repo, 'add', 'unrelated.txt'); // staged work must stay exactly as it is
+
+  const first = backup({ data, repo, worktree });
+  assert.equal(first.committed, true);
+  const files = sh(worktree, 'show', '--name-only', '--format=', 'HEAD').trim().split('\n');
+  assert.ok(
+    files.every((f) => f.startsWith('tracker-backup/')),
+    files.join(',')
+  );
+  assert.match(
+    fs.readFileSync(path.join(worktree, 'tracker-backup/job_pool.csv'), 'utf8'),
+    /token=REDACTED/
+  );
+  assert.equal(sh(repo, 'status', '--short'), 'A  unrelated.txt\n');
+  assert.equal(fs.existsSync(path.join(repo, 'tracker-backup')), false);
+  assert.equal(backup({ data, repo, worktree }).committed, false);
+});
+
+test('backup skips quietly when the backup repository is missing', () => {
+  const r = backup({ repo: path.join(os.tmpdir(), 'cw-no-such-repo-' + process.pid) });
+  assert.match(r.skipped, /not found/);
+});
+
+test('backup push lands on top of newer remote commits without touching a dirty user tree', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-remote-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { origin, mine } = remoteSetup(root);
+  // another session pushes research and edits the same shared file the user is editing
   const other = path.join(root, 'other');
   sh(root, 'clone', '-q', origin, other);
   ident(other);
   fs.writeFileSync(path.join(other, 'research.md'), 'new research');
-  sh(other, 'add', 'research.md');
+  fs.writeFileSync(path.join(other, 'README.md'), 'cv from another session');
+  sh(other, 'add', '.');
   sh(other, 'commit', '-q', '-m', 'research');
   sh(other, 'push', '-q', 'origin', 'main');
-  // uncommitted local work must survive the rebase
-  fs.writeFileSync(path.join(mine, 'README.md'), 'cv edited');
+  fs.writeFileSync(path.join(mine, 'README.md'), 'cv edited locally');
 
-  const data = path.join(root, 'data');
-  createStore(data).initialize({
-    job_pool: [{ job_id: 'j1', company: 'Co', job_title: 'T', status: 'Pending' }],
-    application_log: [],
-    follow_up: [],
-    sync_queue: [],
-  });
-  const r = backup({ data, repo: mine, push: true, proxy: '' });
+  const data = trackerData(root);
+  const worktree = path.join(root, 'wt');
+  const r = backup({ data, repo: mine, worktree, push: true, proxy: '' });
   assert.equal(r.committed, true);
   assert.equal(r.pushed, 'direct');
   const log = sh(origin, 'log', '--format=%s', 'main');
   assert.match(log, /主表备份/);
   assert.match(log, /research/);
-  assert.equal(fs.readFileSync(path.join(mine, 'research.md'), 'utf8'), 'new research');
-  assert.equal(fs.readFileSync(path.join(mine, 'README.md'), 'utf8'), 'cv edited');
+  // the user's tree is untouched: no stash, no merge, no conflict markers
+  assert.equal(fs.readFileSync(path.join(mine, 'README.md'), 'utf8'), 'cv edited locally');
+  assert.equal(sh(mine, 'stash', 'list'), '');
+  assert.equal(sh(mine, 'status', '--short'), ' M README.md\n');
+  // a second run with nothing new is a no-op
+  const again = backup({ data, repo: mine, worktree, push: true, proxy: '' });
+  assert.deepEqual([again.committed, again.pushed], [false, 'up-to-date']);
+});
+
+test('backup rebuilds its snapshot when the remote moved after its last commit', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-moved-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { origin, mine } = remoteSetup(root);
+  const worktree = path.join(root, 'wt');
+  backup({ data: trackerData(root), repo: mine, worktree, push: true, proxy: '' });
+  const other = path.join(root, 'other');
+  sh(root, 'clone', '-q', origin, other);
+  ident(other);
+  fs.writeFileSync(path.join(other, 'later.md'), 'later');
+  sh(other, 'add', '.');
+  sh(other, 'commit', '-q', '-m', 'later');
+  sh(other, 'push', '-q', 'origin', 'main');
+  fs.rmSync(path.join(root, 'data'), { recursive: true });
+  const r = backup({
+    data: trackerData(root, { status: 'Submitted' }),
+    repo: mine,
+    worktree,
+    push: true,
+    proxy: '',
+  });
+  assert.equal(r.pushed, 'direct');
+  const subjects = sh(origin, 'log', '--format=%s', 'main').trim().split('\n');
+  assert.match(subjects[0], /主表备份/);
+  assert.equal(subjects[1], 'later');
+  assert.match(sh(origin, 'show', 'main:tracker-backup/job_pool.csv'), /Submitted/);
+});
+
+test('backup retries once on top of the new remote when its push is rejected', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-race-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { origin, mine } = remoteSetup(root);
+  // the first push is rejected, as if another session had just pushed
+  const marker = path.join(root, 'rejected-once');
+  const hook = path.join(origin, 'hooks', 'pre-receive');
+  fs.writeFileSync(
+    hook,
+    `#!/bin/sh\nif [ ! -f "${marker}" ]; then touch "${marker}"; echo busy >&2; exit 1; fi\nexit 0\n`
+  );
+  fs.chmodSync(hook, 0o755);
+  const r = backup({
+    data: trackerData(root),
+    repo: mine,
+    worktree: path.join(root, 'wt'),
+    push: true,
+    proxy: '',
+  });
+  assert.equal(r.pushed, 'direct');
+  assert.ok(fs.existsSync(marker));
+  assert.match(sh(origin, 'log', '-1', '--format=%s', 'main'), /主表备份/);
 });

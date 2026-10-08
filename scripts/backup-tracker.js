@@ -2,14 +2,18 @@
 /**
  * 把投递主表（八份 CSV）快照备份到私有仓库 lapis-cv/tracker-backup/ 并提交。
  *
- *   node scripts/backup-tracker.js          写入快照并在 lapis-cv 提交（不推送）
- *   node scripts/backup-tracker.js --push   提交后推送：先拉取远程新提交并把本地提交叠在其后；直连失败时改走本机代理重试
+ *   node scripts/backup-tracker.js          写入快照并在独立工作目录里提交（不推送）
+ *   node scripts/backup-tracker.js --push   基于远程最新版本提交并推送；直连失败时改走本机代理重试
+ *
+ * 提交和推送都在 lapis-cv 的独立 git worktree（默认 CareerWorkbench/data/private/backup-worktree，
+ * 可用 JOBHUNT_BACKUP_WORKTREE 改）里进行，本人的 lapis-cv 工作目录不被暂存、合并或改写；
+ * 备份推送后本人那份 lapis-cv 需要 git pull 才能看到新快照。
  *
  * 读取在主表锁内进行，拿到的是一个完整版本，不会备份到写了一半的事务。
  * 备份前打码：测评/笔试/面试平台与短链的整条路径、其他链接里的令牌与个人参数、密码和验证码、
  * 考试账号与简历/申请编号、微信/QQ 号、手机号、个人邮箱的用户名、联系人姓名、住址、推荐码，
  * 以及身份证号。打码后再用一套独立的检查扫描，仍检出敏感内容时不写入、不提交。
- * 主表本身不改动。只提交 tracker-backup/ 目录，不碰 lapis-cv 里的其他改动。
+ * 主表本身不改动。只提交 tracker-backup/ 目录。
  * 每晚汇总与登录检查（remind.js --all）会在后台调用 --push。
  */
 'use strict';
@@ -22,6 +26,9 @@ const ROOT = path.resolve(__dirname, '../..');
 const DATA = process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard');
 const REPO = process.env.JOBHUNT_BACKUP_REPO || path.join(ROOT, 'lapis-cv');
 const PROXY = process.env.JOBHUNT_BACKUP_PROXY ?? 'http://127.0.0.1:7890';
+const WORKTREE =
+  process.env.JOBHUNT_BACKUP_WORKTREE ||
+  path.join(ROOT, 'CareerWorkbench/data/private/backup-worktree');
 const SUBDIR = 'tracker-backup';
 
 // 全角数字、字母和 ＠＝ 先转成半角，后面的规则只需处理一种写法
@@ -197,10 +204,21 @@ function git(args, opts = {}) {
     cwd: opts.cwd || REPO,
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
+    timeout: 180000,
+    // 后台运行时不能弹出凭据输入框，否则会一直挂住
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' },
   });
 }
 
-function backup({ data = DATA, repo = REPO, push = false, proxy = PROXY } = {}) {
+// 备份在 lapis-cv 的一个独立 git worktree 里提交和推送，不碰本人的工作目录：
+// 本人或其他会话在 lapis-cv 里有未提交改动、正在合并时，都不会被暂存、合并或写入冲突标记。
+function backup({
+  data = DATA,
+  repo = REPO,
+  worktree = WORKTREE,
+  push = false,
+  proxy = PROXY,
+} = {}) {
   if (!fs.existsSync(path.join(repo, '.git'))) return { skipped: 'backup repo not found: ' + repo };
   const { revision, files } = createStore(data).exportCsv();
   const redacted = Object.entries(files).map(([name, text]) => [name, redact(text)]);
@@ -208,20 +226,53 @@ function backup({ data = DATA, repo = REPO, push = false, proxy = PROXY } = {}) 
     findLeaks(next).map((kind) => name + ' ' + kind)
   );
   if (leaks.length) throw new Error('打码后仍检出敏感内容，备份未写入：' + leaks.join('；'));
-  const dir = path.join(repo, SUBDIR);
-  fs.mkdirSync(dir, { recursive: true });
-  for (const [name, next] of redacted) {
-    const target = path.join(dir, name);
-    if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== next)
-      fs.writeFileSync(target, next, 'utf8');
+
+  const inRepo = (args) => git(args, { cwd: repo });
+  const inTree = (args) => git(args, { cwd: worktree });
+  // 直连失败时改走本机代理重试一次
+  const remote = (args, cwd) => {
+    try {
+      git(args, { cwd });
+      return 'direct';
+    } catch (e) {
+      if (!proxy) throw e;
+      git(['-c', 'http.proxy=' + proxy, ...args], { cwd });
+      return 'proxy';
+    }
+  };
+  let upstream = null;
+  try {
+    upstream = inRepo(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']).trim();
+  } catch {}
+  if (push && upstream) remote(['fetch', '-q', 'origin'], repo);
+  const base = upstream || inRepo(['rev-parse', 'HEAD']).trim();
+
+  // worktree 停在 base 或 base 之后自己的备份提交上；base 前进到别处（远程有新提交）时重置到 base
+  function prepare() {
+    if (!fs.existsSync(path.join(worktree, '.git'))) {
+      inRepo(['worktree', 'prune']);
+      fs.mkdirSync(path.dirname(worktree), { recursive: true });
+      inRepo(['worktree', 'add', '-q', '--detach', worktree, base]);
+      return;
+    }
+    try {
+      inTree(['merge-base', '--is-ancestor', base, 'HEAD']);
+    } catch {
+      inTree(['reset', '-q', '--hard', base]);
+    }
   }
-  const run = (args) => git(args, { cwd: repo });
-  run(['add', '--', SUBDIR]);
-  const changed = run(['diff', '--cached', '--name-only', '--', SUBDIR]).trim();
-  let committed = false;
-  if (changed) {
+  function snapshot() {
+    const dir = path.join(worktree, SUBDIR);
+    fs.mkdirSync(dir, { recursive: true });
+    for (const [name, next] of redacted) {
+      const target = path.join(dir, name);
+      if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== next)
+        fs.writeFileSync(target, next, 'utf8');
+    }
+    inTree(['add', '--', SUBDIR]);
+    if (!inTree(['diff', '--cached', '--name-only', '--', SUBDIR]).trim()) return false;
     const day = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
-    run([
+    inTree([
       'commit',
       '-q',
       '-m',
@@ -229,45 +280,34 @@ function backup({ data = DATA, repo = REPO, push = false, proxy = PROXY } = {}) 
       '--',
       SUBDIR,
     ]);
-    committed = true;
+    return true;
   }
+
+  prepare();
+  let committed = snapshot();
   let pushed = null;
   if (push) {
-    // 直连失败时改走本机代理重试一次
-    const remote = (args) => {
-      try {
-        run(args);
-        return 'direct';
-      } catch (e) {
-        if (!proxy) throw e;
-        run(['-c', 'http.proxy=' + proxy, ...args]);
-        return 'proxy';
-      }
-    };
-    let upstream = true;
-    try {
-      run(['rev-parse', '--abbrev-ref', '@{u}']);
-    } catch {
-      upstream = false; // 还没有上游分支：直接推送
-    }
-    if (upstream) {
-      // 其他会话或工具可能已向 lapis-cv 推送：先把本地提交叠到远程最新版本之后
-      remote(['fetch', '-q', 'origin']);
-      if (run(['rev-list', '--count', 'HEAD..@{u}']).trim() !== '0') {
+    if (!upstream) {
+      pushed = 'no-upstream';
+    } else {
+      const branch = upstream.replace(/^[^/]+\//, '');
+      for (let attempt = 1; ; attempt++) {
+        if (inTree(['rev-list', '--count', upstream + '..HEAD']).trim() === '0') {
+          pushed = 'up-to-date';
+          break;
+        }
         try {
-          run(['rebase', '-q', '--autostash', '@{u}']);
+          pushed = remote(['push', '-q', 'origin', 'HEAD:' + branch], worktree);
+          break;
         } catch (e) {
-          try {
-            run(['rebase', '--abort']);
-          } catch {}
-          throw new Error(
-            '远程有新提交且与本地冲突，备份只留在本地：' + String(e.stderr || e.message).trim()
-          );
+          if (attempt >= 2) throw e;
+          // 推送期间别的会话推了新提交：取最新远程，在其上重新生成本次快照
+          remote(['fetch', '-q', 'origin'], repo);
+          inTree(['reset', '-q', '--hard', upstream]);
+          committed = snapshot() || committed;
         }
       }
     }
-    const ahead = upstream ? run(['rev-list', '--count', '@{u}..HEAD']).trim() : null;
-    pushed = ahead === '0' ? 'up-to-date' : remote(['push', '-q', 'origin', 'HEAD']);
   }
   return { revision, committed, pushed };
 }

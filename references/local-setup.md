@@ -61,7 +61,7 @@
 
 **tmp 清理**：不再自动运行（2026-10-08 停用：tmp 里有主表和调研报告引用的证据，按修改时间删除会丢证据）。需要时手动预览 `node CareerWorkbench/scripts/clean-tmp.js`，确认没有被引用的文件后才加 `--apply`。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
 
-**主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 打码后写入 `lapis-cv/tracker-backup/`（打码后再独立复查，仍检出测评链接、凭据、个人邮箱、手机号或身份证号时整次不写入，失败原因记入日志），只提交这个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在本地提交。
+**主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 打码后写入 `lapis-cv/tracker-backup/`（打码后再独立复查，仍检出测评链接、凭据、个人邮箱、手机号或身份证号时整次不写入，失败原因记入日志），只提交这个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。提交和推送都在独立的 git worktree `CareerWorkbench/data/private/backup-worktree` 里进行（`JOBHUNT_BACKUP_WORKTREE` 可改），基于远程最新版本生成快照，不暂存、不合并、不改写本人的 lapis-cv 工作目录；本人那份 lapis-cv 要 `git pull` 才能看到新快照。推送被拒（别的会话刚推过）时取最新远程重新生成一次。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在独立工作目录里提交、不推送。
 
 ## 客户端接入
 
