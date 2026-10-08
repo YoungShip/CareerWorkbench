@@ -40,9 +40,9 @@ Use `log_id` and `job_id`. A `Submitted` transition requires a real submission e
 
 Use `event_id` and `job_id`. Keep ordinary reminders separate from hiring stages. Suggested stages: `0 application`, `1 assessment`, `2 first interview`, `3 second interview`, `4 later interview`, `5 offer`. Only assign a stage when evidence supports it.
 
-### sync_queue
+### sync_queue (legacy)
 
-Every confirmed local mutation creates a queue item with a change/revision. `pending`, `error` and `synced` are local synchronization states, not recruiting outcomes.
+Historical rows from the retired online-view sync. New mutations no longer create queue items; keep existing rows as history only.
 
 ## Status semantics
 

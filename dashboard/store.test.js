@@ -1,5 +1,3 @@
-// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
-process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const { test } = require('node:test');
 const { defaultPython } = require('../lib/python-runtime');
 const assert = require('node:assert/strict');
@@ -7,31 +5,6 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createStore, parseCSV, csv } = require('./store');
-test('failed sync remains retryable; acknowledgment cannot clear newer edits', (t) => {
-  const { store } = fixture(t);
-  const edit = (notes) =>
-    store.commit({
-      expected_revision: store.snapshot().revision,
-      operations: [{ type: 'job.patch', job_id: 'j1', patch: { notes } }],
-    });
-  edit('first');
-  const change = store.snapshot().tables.sync_queue[0].change_id;
-  store.commit({
-    expected_revision: store.snapshot().revision,
-    operations: [{ type: 'sync.ack', job_id: 'j1', change_id: change, error: 'Network failed' }],
-  });
-  assert.equal(store.snapshot().tables.sync_queue[0].state, 'error');
-  edit('newer');
-  assert.throws(
-    () =>
-      store.commit({
-        expected_revision: store.snapshot().revision,
-        operations: [{ type: 'sync.ack', job_id: 'j1', change_id: change }],
-      }),
-    /stale/
-  );
-  assert.equal(store.snapshot().tables.sync_queue[0].state, 'pending');
-});
 test('backup restores all tables into an isolated store', (t) => {
   const { store, dir } = fixture(t);
   const before = store.snapshot();
@@ -153,12 +126,11 @@ test('stale writes rejected without changing data; stable identity cannot be dup
   assert.equal(store.snapshot().revision, now.revision);
 });
 
-test('same-title positions warn without merging; remote identities remain unique and events stay linked', (t) => {
+test('same-title positions warn without merging and events stay linked', (t) => {
   const { store } = fixture(t);
   const plan = {
     expected_revision: store.snapshot().revision,
     operations: [
-      { type: 'job.patch', job_id: 'j1', patch: { offernotes_id: 'p1' } },
       {
         type: 'event.add',
         job_id: 'j1',
@@ -188,22 +160,6 @@ test('same-title positions warn without merging; remote identities remain unique
   let snap = store.snapshot();
   assert.equal(snap.tables.job_pool.length, 2);
   assert.equal(snap.warnings[0].code, 'possible_duplicate_jobs');
-  assert.throws(
-    () =>
-      store.commit({
-        expected_revision: snap.revision,
-        operations: [
-          {
-            type: 'sync.ack',
-            job_id: 'j2',
-            change_id: snap.tables.sync_queue.find((q) => q.job_id === 'j2').change_id,
-            offernotes_id: 'p1',
-          },
-        ],
-      }),
-    /Duplicate OfferNotes ID/
-  );
-  assert.equal(store.snapshot().revision, snap.revision);
   store.commit({
     expected_revision: snap.revision,
     operations: [{ type: 'job.patch', job_id: 'j2', patch: { job_title: 'Renamed' } }],
@@ -264,8 +220,7 @@ test('submission needs evidence; calendar additions preserve existing records an
   assert.equal(snap.tables.follow_up.length, 2);
   assert.equal(snap.tables.application_log[0].job_description, 'Full JD');
   assert.equal(snap.tables.follow_up[0].job_title, 'Renamed');
-  assert.equal(snap.tables.sync_queue.length, 1);
-  assert.equal(snap.tables.sync_queue[0].state, 'pending');
+  assert.equal(snap.tables.sync_queue.length, 0);
 });
 test('preview makes no changes; reinitialization and invalid dates rejected', (t) => {
   const { store } = fixture(t);
@@ -395,7 +350,7 @@ test('failed file replacement rolls back without leaving private CSV temporaries
     fs.renameSync = rename;
   }
 });
-test('live lock prevents overlapping writers and stale sync acknowledgments fail', (t) => {
+test('live lock prevents overlapping writers; sync acknowledgments no longer exist', (t) => {
   const { dir, store } = fixture(t);
   const lock = path.join(dir, '.store', 'lock');
   fs.mkdirSync(lock);
@@ -412,7 +367,7 @@ test('live lock prevents overlapping writers and stale sync acknowledgments fail
         expected_revision: store.snapshot().revision,
         operations: [{ type: 'sync.ack', job_id: 'j1', change_id: 'stale' }],
       }),
-    /stale/
+    /Unknown operation: sync.ack/
   );
 });
 

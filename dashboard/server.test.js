@@ -1,5 +1,3 @@
-// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
-process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -8,7 +6,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { createStore } = require('./store');
-test('HTTP writes use IDs, reject stale snapshots and queue sync; calendar retains prior events', async (t) => {
+test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events', async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobhunt-http-'));
   const store = createStore(dir);
   store.initialize({
@@ -89,7 +87,6 @@ test('HTTP writes use IDs, reject stale snapshots and queue sync; calendar retai
   });
   assert.equal(r.status, 200);
   assert.equal(store.snapshot().tables.job_pool[0].status, 'Offer');
-  assert.equal(store.snapshot().tables.sync_queue[0].state, 'pending');
   next = store.snapshot();
   const completed = await post('/api/calendar/complete', {
     expected_revision: next.revision,
@@ -106,7 +103,6 @@ test('HTTP writes use IDs, reject stale snapshots and queue sync; calendar retai
   assert.equal(final.tables.follow_up[0].status, 'Completed');
   assert.equal(final.tables.follow_up[0].stage_status, '6');
   assert.match(final.tables.follow_up[0].notes, /本人确认完成/);
-  assert.equal(final.tables.sync_queue[0].state, 'pending');
   assert.equal(
     (
       await post('/api/calendar/complete', {

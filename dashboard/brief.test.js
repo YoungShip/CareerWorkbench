@@ -1,5 +1,3 @@
-// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
-process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const test = require('node:test'),
   assert = require('node:assert/strict'),
   crypto = require('node:crypto');
@@ -77,14 +75,14 @@ test('missing or changed policy never silently means no conflicts', () => {
   assert.equal(stale.policy.status, 'stale');
   assert.equal(stale.requires_user_confirmation, true);
 });
-test('unknown deadlines and sync backlog are explicitly visible', () => {
+test('unknown deadlines are explicitly visible', () => {
   const r = buildBrief(snap(), { policy, policyText: text, now });
   assert.equal(r.time_needs_confirmation.total, 1);
   assert.equal(r.urgent.total, 0);
   assert.equal(r.overdue_followup.total, 0);
-  assert.equal(r.counts.sync_queue.pending, 1);
-  assert.equal(r.sync_attention.total, 1);
-  assert.match(r.next_steps.join('\\n'), /待同步/);
+  assert.equal(r.counts.sync_queue, undefined);
+  assert.equal(r.sync_attention, undefined);
+  assert.doesNotMatch(r.next_steps.join('\\n'), /同步/);
 });
 test('limits show truncation with total counts; no hidden eligibility decisions', () => {
   const s = snap();

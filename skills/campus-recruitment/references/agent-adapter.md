@@ -67,7 +67,7 @@ Agent 提供的语义判断可以复核，不能为了获得更好等级删除�
 
 先按主 Skill 输出当前范围的已核实结果、未核实条件和选项，等用户选定岗位。匹配结果不是投递授权。
 
-用户已明确选择后，才把稳定 ID 带入新一轮匹配复核，检查该 ID 位于 registerable_position_ids 且 can_register_selected_position=true。其后的 snapshot → preview → apply → read-back 及 OfferNotes 同步完全沿用原协议。pending、范围不完整或来源不足时保持相应阻断；已有投递事实不回滚。
+用户已明确选择后，才把稳定 ID 带入新一轮匹配复核，检查该 ID 位于 registerable_position_ids 且 can_register_selected_position=true。其后的 snapshot → preview → apply → read-back 完全沿用原协议。pending、范围不完整或来源不足时保持相应阻断；已有投递事实不回滚。
 
 ## 资料更新后的同步检查
 

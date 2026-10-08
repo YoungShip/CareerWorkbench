@@ -13,7 +13,7 @@
 | 投递主数据（八份 CSV） | `resume/CareerWorkbench/dashboard/` |
 | 选岗规则、经历边界、公司去重索引 | `resume/lapis-cv/秋招/求职档案.md` |
 | 个人资料（网申母表） | `resume/lapis-cv/秋招/网申档案.json` |
-| 三个完整技能 | 运行位置 `resume/.agents/skills/`，版本源 `CareerWorkbench/skills/`（campus-recruitment、job-application-form-filling、offernotes-sync），两处用 `npm run skills:check` 核对 |
+| 两个完整技能 | 运行位置 `resume/.agents/skills/`，版本源 `CareerWorkbench/skills/`（campus-recruitment、job-application-form-filling），两处用 `npm run skills:check` 核对 |
 | 私有业务数据（不入库） | `resume/CareerWorkbench/data/private/` |
 | MCP 注册 | `resume/.mcp.json`，见 [mcp-server.md](mcp-server.md) |
 
@@ -30,7 +30,6 @@
 | 通道 | profile | 默认调试端口 | 说明 |
 |---|---|---|---|
 | ③A Playwright 网申通道 | `CareerWorkbench/data/private/playwright-application/chrome-profile` | 9333 | 本机运行时锁定 `playwright-core` |
-| ③B Raw CDP 同步通道 | `CareerWorkbench/data/private/offernotes-cdp/chrome-profile` | 9222 | 只用于 OfferNotes 兜底、API 级精确操作和只读诊断 |
 
 两个 profile 都可以持续保存登录会话。
 

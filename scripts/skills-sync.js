@@ -14,7 +14,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SKILL_NAMES = ['campus-recruitment', 'job-application-form-filling', 'offernotes-sync'];
+const SKILL_NAMES = ['campus-recruitment', 'job-application-form-filling'];
 const REPO_SKILLS = path.resolve(__dirname, '..', 'skills');
 const INSTALLED =
   process.env.JOBHUNT_INSTALLED_SKILLS || path.resolve(__dirname, '..', '..', '.agents', 'skills');

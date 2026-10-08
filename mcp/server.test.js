@@ -1,5 +1,3 @@
-// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
-process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -11,28 +9,6 @@ const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio
 const { createStore } = require('../dashboard/store');
 const { createServer } = require('./server');
 const { canonical } = require('./tools');
-
-test('auxiliary-only writes do not claim that jobs entered the sync queue', () => {
-  const { createToolHandlers } = require('./tools');
-  const store = {
-    offernotesSync: true,
-    commit: () => ({ changed_jobs: [], counts: { resume_rules: 1 } }),
-  };
-  const service = { store };
-  const handlers = createToolHandlers({ service, tokens: { verify() {} } });
-  const result = handlers.apply({
-    plan: { operations: [{ type: 'table.upsert', table: 'resume_rules' }] },
-    preview_token: 'fixture',
-  });
-  assert.equal(result.readback, null);
-  assert.match(result.sync, /未新增岗位同步项/);
-  assert.doesNotMatch(result.sync, /已进入 sync_queue/);
-  store.offernotesSync = false;
-  assert.match(
-    handlers.apply({ plan: { operations: [] }, preview_token: 'fixture' }).sync,
-    /同步已停用/
-  );
-});
 
 function fixture(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobhunt-mcp-'));
@@ -135,7 +111,7 @@ test('apply is refused without a preview token and leaves data untouched', async
   assert.equal(createStore(f.dataDir).snapshot().revision, before);
 });
 
-test('preview then apply writes once, reads back changed fields and queues sync', async (t) => {
+test('preview then apply writes once and reads back changed fields', async (t) => {
   const f = fixture(t),
     { call } = await connect(t, f.options);
   const plan = patchPlan((await call('tracker_validate')).data.revision, '笔试已完成');
@@ -166,8 +142,7 @@ test('preview then apply writes once, reads back changed fields and queues sync'
       notes: '笔试已完成',
     },
   ]);
-  const snap = createStore(f.dataDir).snapshot();
-  assert.equal(snap.tables.sync_queue.find((q) => q.job_id === 'j1').state, 'pending');
+  assert.equal(createStore(f.dataDir).snapshot().tables.sync_queue.length, 0);
   // 同一令牌重放：计划里的 expected_revision 已过期，被主表乐观锁拒绝
   assert.match(
     (await call('tracker_apply', { plan, preview_token: preview.data.preview_token })).error,
@@ -226,7 +201,7 @@ test('high-risk operations and extra plan fields are rejected before touching th
         },
       })
     ).error,
-    /not available via MCP/
+    /Unknown operation: sync.ack/
   );
   assert.ok(
     (

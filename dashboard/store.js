@@ -5,7 +5,6 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { jobIds: eventJobIds } = require('./todo');
 const { validateMatchingArtifact, defaultRuntime } = require('../discovery/research');
-const { offernotesSyncEnabled } = require('../lib/offernotes');
 const TABLES = [
   'job_pool',
   'application_log',
@@ -319,8 +318,7 @@ function createStore(root = __dirname, options = {}) {
   const internal = path.join(root, '.store'),
     lock = path.join(internal, 'lock'),
     journal = path.join(internal, 'journal.json'),
-    backupKeepDays = options.backupKeepDays ?? 30,
-    offernotesSync = options.offernotesSync ?? offernotesSyncEnabled();
+    backupKeepDays = options.backupKeepDays ?? 30;
   fs.mkdirSync(internal, { recursive: true });
   function locked(fn) {
     try {
@@ -382,17 +380,12 @@ function createStore(root = __dirname, options = {}) {
   }
   function validate(s) {
     const jobs = s.job_pool.rows,
-      remoteIds = new Set(),
       jobIds = new Set();
     for (const r of jobs) {
       if (!r.job_id || jobIds.has(r.job_id)) fail('Missing/duplicate job_id');
       jobIds.add(r.job_id);
       if (!r.company || !r.job_title) fail('Company and job title required');
       if (!STATUSES.includes(r.status)) fail('Unknown status: ' + r.status);
-      if (r.offernotes_id) {
-        if (remoteIds.has(r.offernotes_id)) fail('Duplicate OfferNotes ID');
-        remoteIds.add(r.offernotes_id);
-      }
     }
     for (const [name, key] of [
       ['application_log', 'log_id'],
@@ -509,7 +502,6 @@ function createStore(root = __dirname, options = {}) {
         revision: revision(s),
         tables: Object.fromEntries(TABLES.map((n) => [n, s[n].rows])),
         warnings: warnings(s),
-        offernotes_sync: offernotesSync,
       };
     });
   }
@@ -542,7 +534,6 @@ function createStore(root = __dirname, options = {}) {
     'resume_variant',
     'current_stage',
     'cohort_match_status',
-    'offernotes_id',
     'job_url',
   ];
   const HEAVY_FIELDS = ['job_description', 'legacy_record', 'legacy_row', 'notes'];
@@ -650,15 +641,6 @@ function createStore(root = __dirname, options = {}) {
           continue;
         }
         const job = s.job_pool.rows.find((r) => r.job_id === op.job_id);
-        if (op.type === 'sync.ack') {
-          const q = s.sync_queue.rows.find((r) => r.job_id === op.job_id);
-          if (!q || q.change_id !== op.change_id) fail('Sync change is stale', 409);
-          q.state = op.error ? 'error' : 'synced';
-          q.error = op.error || '';
-          q.synced_at = op.error ? '' : new Date().toISOString();
-          if (op.offernotes_id && job) job.offernotes_id = op.offernotes_id;
-          continue;
-        }
         if (op.type === 'job.add') {
           if (job) fail('job_id already exists');
           if (!op.job_id) fail('Stable job_id required');
@@ -712,8 +694,6 @@ function createStore(root = __dirname, options = {}) {
                 'Cannot delete a job with application history or events without explicit exact history archive'
               );
           }
-          if (offernotesSync && job.offernotes_id && op.deleted_offernotes_id !== job.offernotes_id)
-            fail('Verified remote deletion ID is required');
           s.application_log.rows = s.application_log.rows.filter((r) => r.job_id !== job.job_id);
           s.follow_up.rows = s.follow_up.rows.filter((r) => r.job_id !== job.job_id);
           s.job_pool.rows = s.job_pool.rows.filter((r) => r.job_id !== job.job_id);
@@ -788,19 +768,6 @@ function createStore(root = __dirname, options = {}) {
         } else fail('Unknown operation: ' + op.type);
         changes.add(job.job_id);
       }
-      for (const jobId of offernotesSync ? changes : []) {
-        const q = {
-          job_id: jobId,
-          change_id: id('change'),
-          state: 'pending',
-          updated_at: new Date().toISOString(),
-          synced_at: '',
-          error: '',
-        };
-        const i = s.sync_queue.rows.findIndex((r) => r.job_id === jobId);
-        if (i < 0) s.sync_queue.rows.push(q);
-        else s.sync_queue.rows[i] = q;
-      }
       if ((plan.operations || []).some((op) => op.type !== 'table.upsert')) summary(s);
       validate(s);
       const result = {
@@ -838,7 +805,7 @@ function createStore(root = __dirname, options = {}) {
       return result;
     });
   }
-  return { snapshot, query, commit, initialize, exportCsv, offernotesSync };
+  return { snapshot, query, commit, initialize, exportCsv };
 }
 function validDate(value) {
   return (

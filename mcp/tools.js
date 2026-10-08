@@ -5,10 +5,9 @@ const { createTrackerService } = require('../lib/tracker-service');
 const { createDiscoveryStore } = require('../discovery/store');
 const { queryDiscovery, buildDiscoveryNext } = require('../discovery/view');
 
-// 这些操作需要浏览器侧证据或本人明确指令，只允许走 CLI 与对应 Skill，不经 MCP 暴露。
+// 这些操作需要本人明确指令，只允许走 CLI，不经 MCP 暴露。
 const BLOCKED_OPERATIONS = {
-  'job.delete': '删除岗位须本人明确要求并先处理线上记录，请走 CLI 流程',
-  'sync.ack': '同步回执必须来自 OfferNotes 写后读回结果，请用 tracker-cli sync-ack',
+  'job.delete': '删除岗位须本人明确要求，请走 CLI 流程',
 };
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 
@@ -127,11 +126,6 @@ function createToolHandlers(options = {}) {
       return {
         ...result,
         readback,
-        sync: !store.offernotesSync
-          ? 'OfferNotes 同步已停用，主表即为最终记录'
-          : result.changed_jobs.length
-            ? '改动已进入 sync_queue（pending），线上 OfferNotes 尚未同步，需按 offernotes-sync 处理'
-            : '本次未改变岗位记录，未新增岗位同步项；既有队列状态仍以完整核查为准',
       };
     },
   };

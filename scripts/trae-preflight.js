@@ -20,7 +20,7 @@ const { targetSkillsRoot } = require('../lib/skill-paths');
 const project = path.resolve(__dirname, '..'),
   workspace = path.dirname(project);
 const skills = path.join(workspace, '.agents', 'skills');
-const SKILL_NAMES = ['campus-recruitment', 'job-application-form-filling', 'offernotes-sync'];
+const SKILL_NAMES = ['campus-recruitment', 'job-application-form-filling'];
 const python = defaultPython();
 const checks = [];
 
@@ -269,19 +269,7 @@ try {
   playwrightVersion = JSON.parse(fs.readFileSync(playwrightRuntime, 'utf8')).version || null;
 } catch {}
 
-const cdpDir = path.join(project, 'data', 'private', 'offernotes-cdp');
-const cdpFiles = [
-  'launch-run.js',
-  'launch-config.json',
-  'cdp-probe.js',
-  'cdp-sync.js',
-  'cdp-list-progress.js',
-  'cdp-close.js',
-];
-const cdpMissing = cdpFiles.filter((f) => !fs.existsSync(path.join(cdpDir, f)));
-const cdpProfile = path.join(cdpDir, 'chrome-profile');
 const playwrightDirPosix = playwrightDir.replace(/\\/g, '/');
-const cdpDirPosix = cdpDir.replace(/\\/g, '/');
 
 function probePort(port) {
   return new Promise((res) => {
@@ -301,16 +289,12 @@ function probePort(port) {
 }
 
 (async () => {
-  const [playwrightPort, cdpPort] = await Promise.all([probePort(9333), probePort(9222)]);
+  const playwrightPort = await probePort(9333);
 
   const unverified = [];
   for (const cli of targets.length ? targets : ['(未指定客户端)'])
     unverified.push(cli + ' skill loading', cli + ' search', cli + ' browser and login');
-  unverified.push(
-    'Playwright ATS page execution',
-    'OfferNotes page execution',
-    'unattended continuation'
-  );
+  unverified.push('Playwright ATS page execution', 'unattended continuation');
 
   const channelAdvice = {
     cannot_detect:
@@ -328,26 +312,8 @@ function probePort(port) {
         close: 'node ' + playwrightDirPosix + '/close.js',
       },
     },
-    level3B_raw_cdp: {
-      purpose: 'OfferNotes 同步和只读诊断；不作为普通 ATS 填表首选',
-      dir: cdpDir,
-      toolchain: { missing: cdpMissing, present: cdpMissing.length === 0 },
-      profile: { path: cdpProfile, present: fs.existsSync(cdpProfile) },
-      port_9222: cdpPort,
-      commands: [
-        'node ' + cdpDirPosix + '/launch-run.js',
-        'node ' + cdpDirPosix + '/cdp-probe.js',
-        'node ' +
-          cdpDirPosix +
-          '/cdp-sync.js <payload绝对路径> CareerWorkbench/dashboard/offernotes-reconcile.js <out绝对路径>',
-        'node ' + cdpDirPosix + '/cdp-list-progress.js <公司关键词>',
-        'node ' + cdpDirPosix + '/cdp-close.js',
-      ],
-    },
-    note: '若 ①/② 不存在或不可靠，网申优先③A Playwright；OfferNotes/API 同步按需③B Raw CDP。端口未监听只表示专用实例未启动，不等于登录失效。禁止 remote-debug 用户默认 Chrome profile。',
-    excluded:
-      'agent-browser 对 OfferNotes 必然 403（独立 Chromium profile，无登录态），已排除，不要再提议。',
-    reference: 'AGENTS.md ## 0/7/8 与 job-application-form-filling / offernotes-sync skills',
+    note: '若 ①/② 不存在或不可靠，网申用③A Playwright。端口未监听只表示专用实例未启动，不等于登录失效。禁止 remote-debug 用户默认 Chrome profile。',
+    reference: 'AGENTS.md ## 0/7/8 与 job-application-form-filling skill',
   };
 
   console.log(

@@ -7,7 +7,7 @@ metadata:
 
 # Campus recruitment workflow
 
-负责“研究与选择”和“本地投递记录维护”，不负责代填网申页面；表单填写由 `job-application-form-filling` 负责。在线进度视图同步（`offernotes-sync`）当前停用，本地主表即最终记录。
+负责“研究与选择”和“本地投递记录维护”，不负责代填网申页面；表单填写由 `job-application-form-filling` 负责。本地主表即最终记录。
 
 ## Hard boundaries
 
@@ -29,7 +29,7 @@ metadata:
 - **C：已选岗位补档**：补齐历史 JD、来源或材料，不重新推荐、不改变已投事实。
 - **D：进度维护**：依据邮件、账号页或用户凭据更新提交/测评/面试/结果；不顺带重做调研。
 
-开始前按任务读取最新规则与必要材料：进度维护优先适配器的 brief/query，新公司研究先读取当前规则及该公司索引，再按岗位读取 JD 与证据；不默认加载整张历史公司表或全背景。适配器提供 rules 时用其动态提取当前规则，不能依赖过期摘要。写入前仍执行完整 snapshot 审计；任何写入都要记录证据并检查同步队列。
+开始前按任务读取最新规则与必要材料：进度维护优先适配器的 brief/query，新公司研究先读取当前规则及该公司索引，再按岗位读取 JD 与证据；不默认加载整张历史公司表或全背景。适配器提供 rules 时用其动态提取当前规则，不能依赖过期摘要。写入前仍执行完整 snapshot 审计；任何写入都要记录证据并读回。
 
 ## A. Full research
 
@@ -65,7 +65,7 @@ snapshot → build plan with expected_revision → preview → apply → snapsho
 
 新岗位用稳定新 `job_id` 登记 `Pending` 或等价待投状态，保留未修改字段。由未投转 `Submitted` 时，同一计划必须追加含真实证据的申请日志和实际日期。不得把计划日期、页面打开或预览结果写成提交事实。旧 schema 记录可读取展示，但没有完成迁移和新校验前不得当作新标准通过。
 
-本地写入读回成功即完成登记。在线视图同步当前停用，写入不进入 `sync_queue`；仅当本人恢复同步（`JOBHUNT_OFFERNOTES_SYNC=1`）时，才检查队列并交由 `offernotes-sync` 处理，失败保留 `pending/error`，不能把本地保存说成线上完成。
+本地写入读回成功即完成登记。
 
 ## References
 

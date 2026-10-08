@@ -2,7 +2,6 @@
 'use strict';
 const crypto = require('node:crypto');
 const { collectEvents, jobDeadlineEvents } = require('../scripts/reminder-core');
-const { offernotesSyncEnabled } = require('../lib/offernotes');
 function currentSection(text, heading = '选岗规则') {
   const lines = String(text)
     .replace(/^\uFEFF/, '')
@@ -53,7 +52,6 @@ function buildBrief(
     discovery = null,
     extraWarnings = [],
     reminderHealth = null,
-    offernotesSync = offernotesSyncEnabled(),
   } = {}
 ) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
@@ -96,28 +94,13 @@ function buildBrief(
       (r, x) => ((r[x[field] || 'unknown'] = (r[x[field] || 'unknown'] || 0) + 1), r),
       {}
     );
-  const pending = jobs.filter((j) => j.status === 'Pending'),
-    jobsById = new Map(jobs.map((job) => [job.job_id, job]));
-  const syncRows = (offernotesSync ? tables.sync_queue : [])
-    .filter((row) => row.state !== 'synced')
-    .map((row) => {
-      const job = jobsById.get(row.job_id) || {};
-      return {
-        job_id: row.job_id,
-        company: job.company || '',
-        job_title: job.job_title || '',
-        state: row.state,
-        updated_at: row.updated_at || '',
-        error: row.error || '',
-      };
-    });
+  const pending = jobs.filter((j) => j.status === 'Pending');
   const discoveryDeadlines = discovery?.deadline_attention || grouped([]);
   const nextSteps = [];
   if (report.soon.length) nextSteps.push('先处理可行动的临期事项');
   if (discoveryDeadlines.total)
     nextSteps.push('复核尚未研究但临近截止的公司线索；文本提取日期必须回官方来源确认');
   if (findings.length) nextSteps.push('确认待投规则冲突，不自动取消或提交');
-  if (syncRows.length) nextSteps.push(`处理 ${syncRows.length} 条待同步/错误队列并完成线上读回`);
   if (reminderHealth?.status === 'attention')
     nextSteps.push(
       '提醒通道异常：' + reminderHealth.warnings.join('；') + '（见 logs/remind.log）'
@@ -131,7 +114,6 @@ function buildBrief(
       jobs: jobs.length,
       statuses: count(jobs, 'status'),
       pending_grades: count(pending, 'match_grade'),
-      sync_queue: offernotesSync ? count(tables.sync_queue, 'state') : 'disabled',
       discovery: discovery?.counts || null,
     },
     urgent: grouped(report.soon),
@@ -139,7 +121,6 @@ function buildBrief(
     overdue_without_action_count: report.overdue.filter((x) => !String(x.next || '').trim()).length,
     time_needs_confirmation: grouped(report.noDeadline),
     discovery_deadlines: discoveryDeadlines,
-    sync_attention: grouped(syncRows),
     reminder_health: reminderHealth,
     policy: {
       ...active,

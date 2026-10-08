@@ -32,10 +32,9 @@
   const events = () => snapshot?.tables.follow_up || [];
   const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
   function navigate(next) {
-    if (!['overview', 'jobs', 'schedule', 'sync'].includes(next)) next = 'overview';
+    if (!['overview', 'jobs', 'schedule'].includes(next)) next = 'overview';
     view = next;
-    for (const name of ['overview', 'jobs', 'schedule', 'sync'])
-      $(name + '-view').hidden = name !== view;
+    for (const name of ['overview', 'jobs', 'schedule']) $(name + '-view').hidden = name !== view;
     document.querySelectorAll('.nav-item').forEach((b) => {
       b.classList.toggle('active', b.dataset.view === view);
       b.setAttribute('aria-current', b.dataset.view === view ? 'page' : 'false');
@@ -44,7 +43,6 @@
       overview: '把下一步，放在眼前。',
       jobs: '每一个机会，都有记录。',
       schedule: '按自己的节奏，向前一步。',
-      sync: '让进度保持一致。',
     }[view];
     history.replaceState(null, '', '#' + view);
   }
@@ -103,7 +101,7 @@
       renderOverview();
       renderJobs();
       renderEvents();
-      renderSync();
+      $('save-status').textContent = '本地已保存';
       TodoUI.render(snapshot, openEvent, reload);
     } catch (error) {
       $('load-status').hidden = false;
@@ -555,54 +553,6 @@
       $('event-list').append(row);
     }
     if (!events().length) empty($('event-list'), '暂无日程。');
-  }
-  function renderSync() {
-    if (snapshot.offernotes_sync === false) {
-      $('sync-status').textContent = '本地已保存';
-      $('sync-summary').textContent = '已停用';
-      $('nav-sync-count').textContent = '—';
-      empty($('sync-rows'), 'OfferNotes 同步已停用，进度以本地主表为准。');
-      return;
-    }
-    const queue = snapshot.tables.sync_queue,
-      pending = queue.filter((q) => q.state !== 'synced'),
-      names = { synced: '已同步', pending: '待同步', error: '同步失败' };
-    $('sync-status').textContent = pending.length
-      ? '本地已保存 · OfferNotes 待同步 ' + pending.length + ' 条'
-      : '本地已保存 · 同步队列已处理';
-    $('sync-summary').textContent = pending.length ? pending.length + ' 条待处理' : '已全部处理';
-    $('nav-sync-count').textContent = pending.length;
-    $('sync-rows').replaceChildren();
-    for (const row of queue
-      .slice()
-      .sort((a, b) => (a.state === 'synced') - (b.state === 'synced'))) {
-      const job = jobs().find((j) => j.job_id === row.job_id),
-        node = el('div', undefined, 'sync-row'),
-        main = el('div', undefined, 'row-main');
-      main.append(el('strong', job ? job.company + ' · ' + job.job_title : row.job_id));
-      if (row.error) main.append(el('p', row.error, 'error'));
-      if (row.synced_at)
-        main.append(
-          el(
-            'p',
-            '最近成功 ' +
-              new Date(row.synced_at).toLocaleString('zh-CN', {
-                timeZone: 'Asia/Shanghai',
-                hour12: false,
-              }),
-            'muted'
-          )
-        );
-      node.append(
-        main,
-        tag(
-          names[row.state] || row.state,
-          row.state === 'error' ? 'danger' : row.state === 'pending' ? 'warning' : ''
-        )
-      );
-      $('sync-rows').append(node);
-    }
-    if (!queue.length) empty($('sync-rows'), '暂无同步记录。');
   }
   for (const b of document.querySelectorAll('[data-view]'))
     b.onclick = () => navigate(b.dataset.view);

@@ -62,8 +62,6 @@ flowchart TD
     V --> H[Skill 审阅与用户选岗]
     H --> M[CLI / MCP：预览、版本校验、应用、读回]
     M --> D[本地 CSV 事务主表与看板]
-    D --> Q[同步队列]
-    Q --> O[OfferNotes 写后读回]
 ```
 
 - **模型负责语义判断，程序负责约束**：Pydantic 输出契约、原文行号回填、真实证据 ID、确定性结论推导、检索与纠错次数上限。
@@ -90,9 +88,9 @@ flowchart TD
 
 ### 作者本机的日常使用
 
-在 resume 工作区打开助手会话，直接提出研究公司、比较岗位、准备网申、更新进度或同步记录的需求。三个 Skill 分别负责公司研究、表单填写和 OfferNotes 同步；所有提交遵循用户明确授权。
+在 resume 工作区打开助手会话，直接提出研究公司、比较岗位、准备网申或更新进度的需求。两个 Skill 分别负责公司研究和表单填写；所有提交遵循用户明确授权。
 
-本地看板：http://localhost:8420/dashboard.html 。新界面包含总览、岗位与投递、日程与待办、同步记录，支持搜索与筛选、查看完整JD和申请历史、编辑备注、管理日程及登记已确认结果。深浅主题和窄屏布局均可用。
+本地看板：http://localhost:8420/dashboard.html 。新界面包含总览、岗位与投递、日程与待办，支持搜索与筛选、查看完整JD和申请历史、编辑备注、管理日程及登记已确认结果。深浅主题和窄屏布局均可用。
 
 Windows 手动打开：dashboard/start-dashboard-silent.bat。登录自启任务为 CareerWorkbench Dashboard。查看状态：node dashboard/serve.js status；停止：node dashboard/serve.js stop。服务只监听 127.0.0.1。
 
@@ -110,9 +108,9 @@ Windows 手动打开：dashboard/start-dashboard-silent.bat。登录自启任务
 
 ## 数据与写入
 
-八份 dashboard CSV 是唯一投递主数据，旧 Excel 保留历史用途；OfferNotes 同步自 2026-10-09 起默认停用（`JOBHUNT_OFFERNOTES_SYNC=1` 可恢复）。不要用表格软件直接修改 CSV。
+八份 dashboard CSV 是唯一投递主数据，旧 Excel 保留历史用途。不要用表格软件直接修改 CSV。
 
-按稳定 job_id 与整体版本执行 snapshot → preview → apply → read-back。本地读回即完成登记；恢复 OfferNotes 同步时，在线读回成功才记同步完成。研究结论、用户选岗、实际提交是不同事实。完整规则见 [主表协议](references/local-tracker.md)。
+按稳定 job_id 与整体版本执行 snapshot → preview → apply → read-back。本地读回即完成登记。研究结论、用户选岗、实际提交是不同事实。完整规则见 [主表协议](references/local-tracker.md)。
 
 会话只读入口：
 

@@ -15,8 +15,7 @@
 ```text
 skills/
 ├── campus-recruitment/              公司研究、全量岗位获取、JD 匹配、选岗与投递表登记
-├── job-application-form-filling/    ATS/网申表单填写、上传、读回审计与站点经验
-└── offernotes-sync/                 本地投递主表到在线进度视图的安全同步
+└── job-application-form-filling/    ATS/网申表单填写、上传、读回审计与站点经验
 docs/skills/
 ├── workflow.md                      跨 Skill 的端到端工作流
 ├── privacy.md                       脱敏、权限与凭据边界
@@ -40,16 +39,14 @@ Windows 示例（把目标路径替换为实际 Codex skills 目录）：
 ```powershell
 Copy-Item -Recurse -Force skills/campus-recruitment <skills-root>/campus-recruitment
 Copy-Item -Recurse -Force skills/job-application-form-filling <skills-root>/job-application-form-filling
-Copy-Item -Recurse -Force skills/offernotes-sync <skills-root>/offernotes-sync
 ```
 
-只复制 `skills/` 下的三个目录；`docs/skills/`、`schemas/` 和 `examples/` 是维护与验证材料，不是候选人资料。迁移现有旧记录前请先看 [docs/skills/migration.md](../docs/skills/migration.md)。在 CareerWorkbench 工作区内可直接用 `npm run skills:install` 安装到 `../.agents/skills`。
+只复制 `skills/` 下的两个目录；`docs/skills/`、`schemas/` 和 `examples/` 是维护与验证材料，不是候选人资料。迁移现有旧记录前请先看 [docs/skills/migration.md](../docs/skills/migration.md)。在 CareerWorkbench 工作区内可直接用 `npm run skills:install` 安装到 `../.agents/skills`。
 
 每次使用时只读取当前任务需要的参考资料：
 
 - 公司研究/选岗：`campus-recruitment`
 - 网申填写：`job-application-form-filling`
-- 投递表或在线进度同步：`offernotes-sync`
 
 ## 工作流边界
 
@@ -58,8 +55,7 @@ Copy-Item -Recurse -Force skills/offernotes-sync <skills-root>/offernotes-sync
 - 最终提交与浏览器通道分离：默认 `review` 停在提交前；只有用户明确预授权具体岗位/批次，或另行定义受限的 `autonomous` 范围时，才可在完整审计后自动提交。
 - 任何真实个人字段只从用户本地档案读取，不写入本目录。
 - 主表通过 `snapshot → preview → apply → read-back` 事务接口更新，不直接编辑 CSV。
-- 在线同步必须先 dry-run，再执行、线上读回、确认变更版本；失败项保留 pending/error。
-- Playwright + 非默认持久化 profile 可用于可靠的网申 UI 填写与读回；Raw CDP 仍不作为普通 ATS 填表首选。任何通道都不得用来绕过登录验证、验证码或既定提交授权。
+- Playwright + 非默认持久化 profile 可用于可靠的网申 UI 填写与读回。任何通道都不得用来绕过登录验证、验证码或既定提交授权。
 
 ## 发布前检查
 

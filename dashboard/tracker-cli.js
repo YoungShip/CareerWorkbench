@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 const path = require('node:path');
-const { extractOut, emitJson, atomicWriteJson } = require('../lib/json-output');
+const { extractOut, emitJson } = require('../lib/json-output');
 const { createTrackerService, readJson } = require('../lib/tracker-service');
 const service = createTrackerService({ projectDir: path.resolve(__dirname, '..') }),
   store = service.store;
@@ -102,50 +102,9 @@ try {
   } else if (command === 'initialize') {
     if (!file || rest.length) throw Error('initialize requires exactly one migration JSON file');
     result = store.initialize(readJson(file));
-  } else if (command === 'sync-export') {
-    if (!file || rest.length) throw Error('sync-export requires exactly one output payload file');
-    const snap = store.snapshot();
-    const entries = snap.tables.sync_queue
-      .filter((q) => q.state !== 'synced')
-      .map((q) => ({
-        change_id: q.change_id,
-        job: Object.fromEntries(
-          Object.entries(snap.tables.job_pool.find((j) => j.job_id === q.job_id)).filter(
-            ([k]) => !['legacy_record', 'legacy_row'].includes(k)
-          )
-        ),
-        events: snap.tables.follow_up.filter((e) => require('./todo').jobIds(e).includes(q.job_id)),
-      }));
-    const identity_index = snap.tables.job_pool.map(
-      ({ job_id, offernotes_id, company, job_title }) => ({
-        job_id,
-        offernotes_id,
-        company,
-        job_title,
-      })
-    );
-    const written = atomicWriteJson(file, { dryRun: true, identity_index, entries });
-    result = { pending: entries.length, ...written };
-  } else if (command === 'sync-ack') {
-    if (!file || rest.length) throw Error('sync-ack requires exactly one result JSON file');
-    const input = readJson(file);
-    if (input.dryRun !== false || !Array.isArray(input.results))
-      throw new Error('An actual sync result with dryRun:false is required');
-    const plan = {
-      expected_revision: store.snapshot().revision,
-      operations: input.results.map((r) => ({
-        type: 'sync.ack',
-        job_id: r.job_id,
-        change_id: r.change_id,
-        error: r.error || '',
-        offernotes_id: r.offernotes_id || '',
-      })),
-    };
-    store.commit(plan, true);
-    result = store.commit(plan);
   } else
     throw new Error(
-      'Usage: node tracker-cli.js snapshot|validate|check-artifacts|rules|brief [--limit=8]|query [--job_id=X] [--company=X] [--status=X] [--fields=a,b] [--include_description] [--no_events]|preview plan.json|apply plan.json|initialize migration.json|sync-export payload.json|sync-ack results.json [--out=file.json]'
+      'Usage: node tracker-cli.js snapshot|validate|check-artifacts|rules|brief [--limit=8]|query [--job_id=X] [--company=X] [--status=X] [--fields=a,b] [--include_description] [--no_events]|preview plan.json|apply plan.json|initialize migration.json [--out=file.json]'
     );
   emitJson(result, out);
 } catch (e) {

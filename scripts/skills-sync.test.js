@@ -27,12 +27,12 @@ test('skills sync detects drift, ignores CRLF and caches, and copies both ways',
   put(installed, 'campus-recruitment/scripts/__pycache__/x.pyc', 'bin');
   assert.equal(diffSkills({ repo, installed }).in_sync, true);
 
-  put(installed, 'offernotes-sync/SKILL.md', 'a\nchanged\n');
-  put(installed, 'offernotes-sync/references/new.md', 'n');
+  put(installed, 'job-application-form-filling/SKILL.md', 'a\nchanged\n');
+  put(installed, 'job-application-form-filling/references/new.md', 'n');
   put(repo, 'job-application-form-filling/old.md', 'o');
   const d = diffSkills({ repo, installed });
-  assert.deepEqual(d.changed, ['offernotes-sync/SKILL.md']);
-  assert.deepEqual(d.onlyInstalled, ['offernotes-sync/references/new.md']);
+  assert.deepEqual(d.changed, ['job-application-form-filling/SKILL.md']);
+  assert.deepEqual(d.onlyInstalled, ['job-application-form-filling/references/new.md']);
   assert.deepEqual(d.onlyRepo, ['job-application-form-filling/old.md']);
 
   copySkills(installed, repo); // capture

@@ -7,7 +7,7 @@ metadata:
 
 # Job application form filling
 
-负责“已经选定岗位后的表单准备与填写”。公司研究、岗位匹配和投递表登记由 `campus-recruitment` 负责；提交后的登记在本地主表完成；在线进度同步（`offernotes-sync`）当前停用。
+负责“已经选定岗位后的表单准备与填写”。公司研究、岗位匹配和投递表登记由 `campus-recruitment` 负责；提交后的登记在本地主表完成。
 
 ## Hard boundaries
 
@@ -17,16 +17,15 @@ metadata:
 4. 不把未完成的项目、AI 辅助代码、未来训练计划或 JD 要求写成既有能力。
 5. 操作成功不等于字段成功；文本、下拉、日期、勾选、附件都必须读回核对。页面显示过也不等于已服务端保存。对于会把字段写入共享 profile/resume、存在自动复用/二次映射，或有可靠同源读取接口的 ATS，保存/提交后还必须做持久化状态读回；不能只凭当前 UI 判定服务器真值。
 6. 最终外部副作用遵循 review / preauthorized / autonomous 授权模式；无明确模式时使用 review。提交后必须取得真实提交证据才能登记 Submitted。
-7. **Playwright 专用持久化 profile 可用于网申填写；Raw CDP 不作为普通 ATS 填表首选。** Playwright 允许打开申请页、上传、解析纠错、填写、保存和读回；Raw CDP 只保留在线进度同步/只读诊断及用户明确的特殊例外。两者都不得 remote-debug 用户真实默认 Chrome profile。
+7. **Playwright 专用持久化 profile 用于网申填写。** 允许打开申请页、上传、解析纠错、填写、保存和读回；不得 remote-debug 用户真实默认 Chrome profile。Raw CDP 直连不作为网申通道。
 8. 自动化交互失败时最多采用三层有界策略，不无限重试、不随机坐标点击。验证码、未知高影响问题、额度/志愿冲突和不可逆弹窗立即交给用户。
 9. **最终提交还要检查项目级隐藏门**：志愿/顺序、项目总额度、同单位额度、项目确认项等可能不在简历表单中。提交接口即使 HTTP 200，也必须检查业务 code/msg；若返回“志愿不完整/顺序缺失/额度冲突”等业务错误，不得登记 Submitted。先查账号投递记录防止其实已生成记录，再解析当前项目配置、官方弹窗或前端行为定位缺失门，确认后才允许有界重试；重试后再次读回投递记录。若志愿选择会占用稀缺额度、不可修改或影响其他岗位，仍属于人工确认门。
 
 ## Browser channel and remote takeover
 
-通道优先级按当前运行时能力选择：①已授权日常 Chrome 插件 → ②内置浏览器 → ③A Playwright 专用持久化 profile → ③B Raw CDP 专用通道。前一级能可靠完成且可读回时不升级。
+通道优先级按当前运行时能力选择：①已授权日常 Chrome 插件 → ②内置浏览器 → ③A Playwright 专用持久化 profile。前一级能可靠完成且可读回时不升级。
 
 - **③A Playwright**：适合 ATS UI。优先 data-cy、label、role、可见文本和真实 option；利用 actionability/auto-wait 拒绝被遮挡或不可交互的元素。必要的组件级 JavaScript 只针对已经精确定位的目标，并在操作后读回。
-- **③B Raw CDP**：适合 API 级精确操作和诊断。不得因为能执行 Runtime.evaluate 就把它当成普通网申默认方案。
 - **远程登录接管**：遇首次注册、短信/扫码/2FA/CAPTCHA 时暂停在当前专用浏览器页面，用户可在本机或已授权远程桌面完成；之后从当前页续跑。不要要求用户把验证码、密码、Cookie 或 token 发进聊天。
 - **失败接管**：同一字段依次尝试语义 locator/真实选项、组件特定方法/键盘、一次可恢复的安全重入；仍失败返回 needs-human。刷新前确认未保存状态是否会丢失。
 - **提交模式**：

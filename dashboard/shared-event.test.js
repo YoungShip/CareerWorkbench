@@ -1,14 +1,11 @@
-// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
-process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const test = require('node:test'),
   assert = require('node:assert/strict'),
   fs = require('node:fs'),
   os = require('node:os'),
-  path = require('node:path'),
-  cp = require('node:child_process');
+  path = require('node:path');
 const { createStore } = require('./store'),
   rules = require('./todo');
-test('shared event is single, queues both jobs and exports completion to both without changing other jobs', (t) => {
+test('shared event is single, changes both jobs and completes for both without changing other jobs', (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobhunt-shared-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const store = createStore(dir);
@@ -22,7 +19,7 @@ test('shared event is single, queues both jobs and exports completion to both wi
   });
   const apply = (operations) =>
     store.commit({ expected_revision: store.snapshot().revision, operations });
-  apply([
+  const added = apply([
     {
       type: 'event.add',
       job_id: 'a',
@@ -38,21 +35,7 @@ test('shared event is single, queues both jobs and exports completion to both wi
   ]);
   let s = store.snapshot();
   assert.equal(s.tables.follow_up.length, 1);
-  assert.deepEqual(s.tables.sync_queue.map((q) => q.job_id).sort(), ['a', 'b']);
-  const file = path.join(dir, 'export.json');
-  const exportSync = () => {
-    cp.execFileSync(
-      process.execPath,
-      [path.join(__dirname, 'tracker-cli.js'), 'sync-export', file],
-      { env: { ...process.env, JOBHUNT_DATA_DIR: dir } }
-    );
-    return JSON.parse(fs.readFileSync(file)).entries;
-  };
-  assert.equal(exportSync().filter((e) => e.events[0].event_id === 'event').length, 2);
-  assert.deepEqual(
-    JSON.parse(fs.readFileSync(file)).identity_index.map((j) => j.job_id),
-    ['a', 'b', 'c']
-  );
+  assert.deepEqual(added.changed_jobs.sort(), ['a', 'b']);
   const beforeRevision = s.revision;
   for (const related of ['["a"]', '["b","b"]', '["missing"]', '{}'])
     assert.throws(() =>
@@ -82,6 +65,6 @@ test('shared event is single, queues both jobs and exports completion to both wi
   for (const id of ['a', 'b'])
     assert.match(s.tables.job_pool.find((j) => j.job_id === id).next_action, /等待结果/);
   assert.equal(s.tables.job_pool.find((j) => j.job_id === 'c').next_action, '');
-  assert.ok(exportSync().every((e) => e.events[0].stage_status === '6'));
+  assert.equal(s.tables.follow_up[0].stage_status, '6');
   assert.throws(() => store.commit({ expected_revision: beforeRevision, operations: [] }));
 });

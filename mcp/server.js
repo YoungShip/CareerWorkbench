@@ -55,7 +55,7 @@ function createServer(options = {}) {
     {
       title: '主表行动摘要',
       description:
-        '会话开始先调用：汇总临期/过期事项、待补救、时间未知、待投规则冲突、discovery 临近截止线索与同步积压。只读；不是投递授权或写入计划。',
+        '会话开始先调用：汇总临期/过期事项、待补救、时间未知、待投规则冲突、discovery 临近截止线索与提醒通道状态。只读；不是投递授权或写入计划。',
       inputSchema: {
         limit: z.number().int().min(1).max(100).optional().describe('每类最多条数，默认 8'),
       },
@@ -155,7 +155,7 @@ function createServer(options = {}) {
     {
       title: '提交主表写入',
       description:
-        '写主表的第二步：只接受与 tracker_preview 完全相同的计划及其 preview_token；计划被改、主表已被其他写入改变或令牌过期都会拒绝，需要重新预览。成功后自动定向读回改动字段，改动进入 sync_queue 待同步 OfferNotes。',
+        '写主表的第二步：只接受与 tracker_preview 完全相同的计划及其 preview_token；计划被改、主表已被其他写入改变或令牌过期都会拒绝，需要重新预览。成功后自动定向读回改动字段。',
       inputSchema: { plan, preview_token: z.string().describe('tracker_preview 返回的令牌') },
       annotations: {
         readOnlyHint: false,

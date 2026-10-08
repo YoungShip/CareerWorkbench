@@ -5,14 +5,13 @@
     if (text !== undefined) e.textContent = text;
     return e;
   };
-  const labels = { pending: '待同步', error: '同步失败', synced: '已同步' };
   function render(s, edit, reload) {
     let host = document.getElementById('todo-home');
     if (!host) {
       host = el('section');
       host.id = 'todo-home';
       host.className = 'calendar-section';
-      document.getElementById('sync-status').after(host);
+      document.getElementById('save-status').after(host);
     }
     host.replaceChildren();
     host.append(el('h2', '测评与面试待办'));
@@ -95,36 +94,6 @@
       history.append(item);
     }
     host.append(history);
-    if (s.offernotes_sync === false) return;
-    const sync = el('details');
-    sync.id = 'sync-details';
-    sync.append(el('summary', 'OfferNotes 同步明细'));
-    sync.append(
-      el('p', '网页修改先保存到本地；有登录态的 AI 会话处理待同步项。刷新可读取最新回执。')
-    );
-    const rows = s.tables.sync_queue
-      .slice()
-      .sort((a, b) => (a.state === 'synced') - (b.state === 'synced'));
-    for (const q of rows) {
-      const j = jobs.find((j) => j.job_id === q.job_id);
-      sync.append(
-        el(
-          'p',
-          (j ? j.company + ' · ' + j.job_title : q.job_id) +
-            '：' +
-            (labels[q.state] || q.state) +
-            (q.error ? ' — ' + q.error : '') +
-            (q.synced_at
-              ? ' · 最近成功 ' +
-                new Date(q.synced_at).toLocaleString('zh-CN', {
-                  timeZone: 'Asia/Shanghai',
-                  hour12: false,
-                })
-              : '')
-        )
-      );
-    }
-    host.append(sync);
   }
   function showCompletion(e, s, card, reload) {
     if (card.querySelector('form')) return;

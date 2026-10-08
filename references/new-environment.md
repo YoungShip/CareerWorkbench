@@ -65,7 +65,7 @@ node dashboard/tracker-cli.js brief
 |---|---|
 | 第 1、3、4、6、10、12 条 | 照常适用 |
 | 第 2 条主表 | 只读：从备份恢复后只用 `brief`、`query`、`rules`、`validate`，不 `apply` |
-| 第 5 条 | OfferNotes 同步已停用，无需处理；公司调研占用表照常认领 |
+| 第 5 条 | 公司调研占用表照常认领 |
 | 第 9 条到期提醒 | 只做第 ① 项：用恢复的主表跑 `brief`，说明数据最多晚一天 |
 | 第 11 条站点经验 | 本地观察在 `data/private/site-knowledge/`，不入库，云端读不到；只用技能里的通用 `site-knowledge.md`，抓目录时按现场页面核实 |
 | 第 13 条仓库同步 | 适用；调研产物见下 |
