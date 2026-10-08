@@ -53,7 +53,7 @@ node dashboard/tracker-cli.js brief
 
 ## 只连 GitHub 的云端会话
 
-**先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/lapis-cv`：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。
+**先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/lapis-cv`：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。Claude Code 云端会话里，lapis-cv 要么事先加进环境的仓库来源，要么由本人在对话中要求添加并批准；由定时任务或自动通知发起的会话没有本人确认，添加私有仓库会被拒绝，这时不要换别的办法绕过，停下来说明需要本人授权。
 
 **搭环境。** 两个仓库克隆到同一个父目录（相当于 `resume/`），按上面的命令安装。Python 测试在仓库根目录运行 `uv run --project agent pytest agent/tests`。要看投递进度时，按上一节从 `tracker-backup/` 恢复主表。
 
@@ -70,6 +70,10 @@ node dashboard/tracker-cli.js brief
 | 第 11 条站点经验 | 本地观察在 `data/private/site-knowledge/`，不入库，云端读不到；只用技能里的通用 `site-knowledge.md`，抓目录时按现场页面核实 |
 | 第 13 条仓库同步 | 适用；调研产物见下 |
 | 第 0、7、8、14 条，`local-setup.md` | 不适用：依赖作者电脑的浏览器登录态或本机 |
+
+**选公司前先测官网可达性。** 云端出站受环境网络策略限制，部分官网和招聘门户连不上（2026-10-08 试跑时交通银行、海康威视招聘站不可达）。选定公司前先 `curl -sS -o /dev/null -w "%{http_code}" -L <官网>` 确认能打开；连不上的换一家，或留给作者电脑处理，不用第三方转载代替官方 JD。
+
+**云端浏览器抓取。** 容器里有无头 Chromium 和全局安装的 Playwright（`NODE_PATH=$(npm root -g)`，启动时传 `executablePath: '/opt/pw-browsers/chromium'`，不要运行 `playwright install`）。只用于读公开目录和 JD，不登录。接口带签名或 CSRF 的门户（如飞书招聘的 `_signature`、`x-csrf-token`），先打开列表页捕获前端发出的真实请求，再在同一页面里用 `fetch` 复用这些请求头翻页，不要猜参数。
 
 **调研产物放哪里。** 报告沿用 `lapis-cv/秋招/<日期>-<公司>岗位比较.md`；原始目录、JD 快照、候选人证据、matching 和 pipeline 输出放在 `lapis-cv/秋招/<公司>-2027校招-<日期>/`。云端本地目录在会话结束后会消失，所以都要提交。提交到新分支并开 PR，经本人或 AI 审核后合并；同时更新 `公司调研占用表.md`。
 
