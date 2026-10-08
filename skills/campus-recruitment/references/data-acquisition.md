@@ -33,6 +33,18 @@
 
 Moka、飞书招聘、Zhiye 等模板可以复用端点形状和字段解析，但仍要确认当前组织、批次和字段名称。模板经验不能替代当次快照。
 
+CareerWorkbench 自带两个模板的只读抓取工具，输出可直接作为 matching v2 的 `raw_catalog`：
+
+```bash
+node discovery/fetch-catalog.js zhiye <org>.zhiye.com <研究目录> [--category 2]
+node discovery/fetch-catalog.js feishu https://<org>.jobs.feishu.cn/<路径>/ <研究目录>
+```
+
+- 生成 `raw/page-NNN.json`（逐页原文）、`raw/api-catalog.json`（`records_path=/items`，`id_path` 北森为 `/JobAdId`、飞书为 `/id`）、`jd/<岗位ID>.txt`（JD 文本快照）和 `catalog-summary.json`（不含 JD 正文的岗位清单，用于划定研究范围）。
+- 收集数与接口总数不一致或岗位 ID 重复时直接报错，不写文件。
+- 北森 `Category` 的含义因组织而异（常见 2=校招），以返回岗位的届别字样核对；飞书要在页面内调用接口（带会话签名），需要 Playwright：优先 `playwright`/`playwright-core` 模块，其次本地 `data/private/playwright-application/runtime`；浏览器取 `JOBHUNT_CHROMIUM`，否则用系统 Chrome。
+- Moka 的列表接口返回加密数据，工具不支持，改走 Layer 2/3。
+
 ### Layer 2: rendered page automation
 
 适用于 API 难以复用、页面有动态分页或需要真实交互的站点。逐页收集岗位链接和可见信息，等待页面完成渲染，记录失败页而不是静默跳过。页面登录墙出现时区分“目录公开不可读”和“账号专属信息需登录”。
