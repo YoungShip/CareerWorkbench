@@ -195,3 +195,36 @@ test('registration boundary: actual CLI refuses a forged runtime without writing
     assert.equal(f.store.snapshot().revision, before);
   }
 });
+
+test('registration boundary: evidence in a project tmp/ scratch directory is refused', (t) => {
+  const f = fixture(t);
+  const scratch = path.join(f.root, 'CareerWorkbench', 'tmp', 'run-1');
+  fs.mkdirSync(scratch, { recursive: true });
+  const moved = path.join(scratch, 'matching.json');
+  fs.copyFileSync(f.matchingFile, moved);
+  const op = { ...f.operation, record: { ...f.operation.record, matching_file: moved } };
+  assert.throws(
+    () =>
+      f.store.commit({ expected_revision: f.store.snapshot().revision, operations: [op] }, true),
+    /tmp\/ scratch directory/
+  );
+});
+
+test('check-artifacts lists registered evidence paths that no longer exist', (t) => {
+  const f = fixture(t);
+  const op = { ...f.operation };
+  f.store.commit({ expected_revision: f.store.snapshot().revision, operations: [op] }, false);
+  const cli = path.join(__dirname, 'tracker-cli.js');
+  const run = () =>
+    JSON.parse(
+      spawnSync(process.execPath, [cli, 'check-artifacts'], {
+        env: { ...process.env, JOBHUNT_DATA_DIR: f.data },
+        encoding: 'utf8',
+      }).stdout
+    );
+  assert.equal(run().missing_count, 0);
+  fs.rmSync(f.matchingFile);
+  const after = run();
+  assert.equal(after.missing_count, 1);
+  assert.equal(after.missing[0].job_id, 'role-1');
+});

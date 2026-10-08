@@ -27,6 +27,8 @@ const JOBS = path.join(DATA, 'job_pool.csv');
 const STATE = path.join(ROOT, 'CareerWorkbench/tmp/remind-state.json');
 const SECRET = path.join(ROOT, 'CareerWorkbench/data/private/secrets/serverchan.json');
 const LOG = path.join(ROOT, 'CareerWorkbench/logs/remind.log');
+const HEALTH = path.join(ROOT, 'CareerWorkbench/logs/reminder-health.json');
+const health = require('../lib/reminder-health');
 
 // 计划任务运行时看不到控制台输出，因此把每次运行结果追加到日志，便于事后排查
 // "到底提醒了没有"。日志只记结果与计数，不记凭据。
@@ -293,15 +295,22 @@ function pushWechat(title, desp, sig, priority = P.ROUTINE) {
   };
   // Server酱是国内服务：先直连（不读环境代理设置），本机代理没开时也能送达；
   // 只有连接都没建立起来时才按环境代理重试一次，已发出的请求不重试，避免重复推送
-  return postForm(key, body, true).then(({ raw, error }) => {
-    if (raw !== undefined) return handle(raw, 'direct');
-    if (!NOT_CONNECTED.has(error.code)) return 'WECHAT_FAIL: ' + error.message;
-    return postForm(key, body, false).then((retry) =>
-      retry.raw !== undefined
-        ? handle(retry.raw, 'proxy')
-        : `WECHAT_FAIL: 直连 ${error.code}；按环境代理重试 ${retry.error.message}`
-    );
-  });
+  return postForm(key, body, true)
+    .then(({ raw, error }) => {
+      if (raw !== undefined) return handle(raw, 'direct');
+      if (!NOT_CONNECTED.has(error.code)) return 'WECHAT_FAIL: ' + error.message;
+      return postForm(key, body, false).then((retry) =>
+        retry.raw !== undefined
+          ? handle(retry.raw, 'proxy')
+          : `WECHAT_FAIL: 直连 ${error.code}；按环境代理重试 ${retry.error.message}`
+      );
+    })
+    .then((result) => {
+      const now = new Date().toISOString();
+      if (/^WECHAT_OK/.test(result)) health.record(HEALTH, { last_wechat_ok_at: now });
+      else health.record(HEALTH, { last_error: { at: now, message: result } });
+      return result;
+    });
 }
 
 const NOT_CONNECTED = new Set([
@@ -568,8 +577,10 @@ async function main() {
   const release = acquireDeliveryLock();
   if (!release) {
     console.log('REMINDER_BUSY: another delivery is active; nothing acknowledged');
+    logRun('REMINDER_BUSY：另一次提醒正在发送，本次跳过');
     return;
   }
+  health.record(HEALTH, { last_run_at: new Date().toISOString() });
   try {
     return await runCli();
   } finally {
@@ -596,6 +607,8 @@ function startTrackerBackup() {
 if (require.main === module)
   main().catch((e) => {
     console.error('REMINDER_ERROR: ' + e.message);
+    logRun('REMINDER_ERROR：' + e.message);
+    health.record(HEALTH, { last_error: { at: new Date().toISOString(), message: e.message } });
     process.exitCode = 1;
   });
 module.exports = { collect, parseCsv, runDue, fmtItem, buildText, acquireDeliveryLock, pushWechat };

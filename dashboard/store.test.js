@@ -838,3 +838,22 @@ test('commits prune old backups but keep recent ones and the last of each older 
     assert.ok(left.has(names[k]), k + ' kept');
   assert.ok(left.has(path.basename(backup)), 'new backup kept');
 });
+
+test('store refuses a CSV that is not valid UTF-8 instead of reading mojibake', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'store-gbk-'));
+  try {
+    const store = createStore(dir);
+    store.initialize({});
+    const file = path.join(dir, 'job_pool.csv');
+    const header = fs.readFileSync(file, 'utf8').split(/\r?\n/)[0];
+    // “示例公司” in GBK
+    const gbk = Buffer.from([0xca, 0xbe, 0xc0, 0xfd, 0xb9, 0xab, 0xcb, 0xbe]);
+    fs.writeFileSync(
+      file,
+      Buffer.concat([Buffer.from(header + '\r\njob-1,'), gbk, Buffer.from('\r\n')])
+    );
+    assert.throws(() => store.snapshot(), /not valid UTF-8/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

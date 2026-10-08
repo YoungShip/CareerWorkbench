@@ -55,7 +55,9 @@
 - Server酱是国内服务，先直连；连接都没建立（如本机代理没开导致 `ECONNREFUSED`）时才按环境代理重试一次，成功时日志注明“经代理”。
 - 另有内容去重、服务端 40001 兜底和跳过记录，用 `node CareerWorkbench/scripts/remind.js --quota` 查看。
 
-运行记录在 `CareerWorkbench/logs/remind.log`，只记结果和计数，不记凭据。
+运行记录在 `CareerWorkbench/logs/remind.log`，只记结果和计数，不记凭据；出错和“另一次提醒正在发送”也记在这里。最近一次运行、最近一次微信推送成功和最近一次错误另存 `logs/reminder-health.json`，行动摘要的 `reminder_health` 读取它，超过 24 小时没有推送成功会在 `next_steps` 提示。
+
+只有日期、没写具体时间的截止按当天 23:59 计算；截止当天 09:00 起另发一次“今天截止”提醒（代替 24 小时提醒），因为很多网站中午或 17:00 就关闭。
 
 **tmp 清理**：不再自动运行（2026-10-08 停用：tmp 里有主表和调研报告引用的证据，按修改时间删除会丢证据）。需要时手动预览 `node CareerWorkbench/scripts/clean-tmp.js`，确认没有被引用的文件后才加 `--apply`。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
 

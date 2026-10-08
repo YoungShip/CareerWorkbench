@@ -8,7 +8,7 @@
  *   node scripts/skills-sync.js --install  把仓库版本装到本机运行位置
  *
  * 只处理三个技能目录，忽略 __pycache__ 与 .pyc；比较时统一换行符，避免
- * Windows 检出的 CRLF 被误报为改动。
+ * Windows 检出的 CRLF 被误报为改动。检查模式顺带核对三份 AGENTS.md 是否一致。
  */
 'use strict';
 const fs = require('node:fs');
@@ -54,6 +54,22 @@ function diffSkills({ repo = REPO_SKILLS, installed = INSTALLED } = {}) {
   };
 }
 
+// 三份 AGENTS.md：仓库这份是同步源，工作区根和 lapis-cv 各有一份副本（AGENTS.md 第 13 条）
+const WORKSPACE = path.resolve(__dirname, '..', '..');
+function diffAgents({
+  source = path.resolve(__dirname, '..', 'AGENTS.md'),
+  copies = [path.join(WORKSPACE, 'AGENTS.md'), path.join(WORKSPACE, 'lapis-cv', 'AGENTS.md')],
+} = {}) {
+  const want = normalized(source);
+  const differing = [],
+    missing = [];
+  for (const copy of copies) {
+    if (!fs.existsSync(copy)) missing.push(copy);
+    else if (normalized(copy) !== want) differing.push(copy);
+  }
+  return { in_sync: !differing.length && !missing.length, differing, missing };
+}
+
 // 用 from 的内容覆盖 to 中的三个技能目录：复制新增与改动的文件，删除 from 中没有的文件
 function copySkills(from, to) {
   const done = [];
@@ -87,9 +103,12 @@ if (require.main === module) {
     console.log(done.length ? done.join('\n') : '两处已一致，无需改动');
   } else {
     const d = diffSkills();
-    console.log(JSON.stringify({ repo: REPO_SKILLS, installed: INSTALLED, ...d }, null, 2));
-    if (!d.in_sync) process.exitCode = 1;
+    const agents = diffAgents();
+    console.log(
+      JSON.stringify({ repo: REPO_SKILLS, installed: INSTALLED, ...d, agents_md: agents }, null, 2)
+    );
+    if (!d.in_sync || !agents.in_sync) process.exitCode = 1;
   }
 }
 
-module.exports = { diffSkills, copySkills, SKILL_NAMES };
+module.exports = { diffSkills, diffAgents, copySkills, SKILL_NAMES };

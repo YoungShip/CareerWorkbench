@@ -18,6 +18,7 @@ node CareerWorkbench/dashboard/tracker-cli.js query
 # 全量审计、队列核查及 apply 前完整审计
 node CareerWorkbench/dashboard/tracker-cli.js snapshot
 node CareerWorkbench/dashboard/tracker-cli.js validate
+node CareerWorkbench/dashboard/tracker-cli.js check-artifacts   # 列出 matching_file/research_file 指向但已不存在的证据文件（只读）
 node CareerWorkbench/dashboard/tracker-cli.js preview <计划文件绝对路径>
 node CareerWorkbench/dashboard/tracker-cli.js apply <计划文件绝对路径>
 ```

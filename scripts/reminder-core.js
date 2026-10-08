@@ -8,6 +8,13 @@ const THRESHOLDS = Object.freeze([
   { id: '2h', hours: 2, priority: 100, title: '2 小时内到期' },
   { id: '24h', hours: 24, priority: 80, title: '24 小时内到期' },
 ]);
+// 截止当天 09:00 起（距 23:59 不足 15 小时）
+const DAY_OF = Object.freeze({
+  id: 'day',
+  hours: 15,
+  priority: 90,
+  title: '今天截止（具体时间未知，以官网为准）',
+});
 function parseInstant(raw) {
   const text = String(raw || '').trim();
   const m = text.match(
@@ -165,6 +172,15 @@ function planDue(report, state, channel) {
     groups.get(threshold.id).items.push({ ...item, receipt_key: key });
   }
   for (const item of report.soon) {
+    // 只有日期的截止按当天 23:59 计算，但很多网站中午或 17:00 就关闭：截止当天早上额外提醒一次
+    if (
+      item.precision === 'date' &&
+      item.remaining_ms > 2 * HOUR &&
+      item.remaining_ms <= DAY_OF.hours * HOUR
+    ) {
+      add(item, DAY_OF);
+      continue;
+    }
     const threshold = THRESHOLDS.find(
       (t) => item.remaining_ms >= 0 && item.remaining_ms <= t.hours * HOUR
     );
@@ -189,8 +205,8 @@ function acknowledge(state, channel, group, now = new Date()) {
       threshold: group.id,
     };
     receipts[receiptKey(item, group.id)] = value;
-    if (group.id === '2h')
-      receipts[receiptKey(item, '24h')] = { ...value, threshold: '24h', subsumed_by: '2h' };
+    if (group.id === '2h' || group.id === 'day')
+      receipts[receiptKey(item, '24h')] = { ...value, threshold: '24h', subsumed_by: group.id };
   }
   for (const records of Object.values(next.delivered))
     for (const [key, value] of Object.entries(records)) {
@@ -234,6 +250,7 @@ module.exports = {
   HOUR,
   PRIORITY,
   THRESHOLDS,
+  DAY_OF,
   parseInstant,
   deadlineOf,
   collectEvents,

@@ -227,6 +227,22 @@ const REGISTRATION_META = [
 //      并给出 registration_reason，写入 source 以便审计。
 // 历史岗位的备注/测评/面试/提交证据维护走 job.patch、log.add、event.*，不经过这里，
 // 因此不受影响。
+// 主表只接受 UTF-8：Excel 在中文系统上另存为 CSV 会变成 GBK，按 UTF-8 宽松读取会把中文静默变成乱码，
+// 下一次写入和每晚备份会把乱码固化下来。读到非法字节就停下，提示用 UTF-8 重新保存。
+const UTF8 = new TextDecoder('utf-8', { fatal: true });
+function readUtf8(file) {
+  try {
+    return UTF8.decode(fs.readFileSync(file));
+  } catch (e) {
+    if (e instanceof TypeError)
+      throw Error(
+        `${path.basename(file)} is not valid UTF-8 (saved by Excel as GBK?); re-save it as UTF-8 CSV`
+      );
+    throw e;
+  }
+}
+// 项目里的 tmp/ 是临时目录，登记证据放进去会随清理丢失（2026-10-07 的自动清理删过一次）
+const SCRATCH_DIR = /[\\/](?:CareerWorkbench|lapis-cv|JobHuntBot)[\\/]tmp[\\/]/i;
 function checkRegistration(op, runtime) {
   const record = op.record || {};
   // Runtime belongs to trusted startup code, never to the plan being checked.
@@ -258,6 +274,10 @@ function checkRegistration(op, runtime) {
   const matchingFile = record.matching_file;
   if (!matchingFile) fail('Research registration requires matching_file');
   if (!path.isAbsolute(matchingFile)) fail('matching_file must be an absolute path');
+  if (SCRATCH_DIR.test(matchingFile))
+    fail(
+      'matching_file must not live in a project tmp/ scratch directory; move the research record to its permanent location first'
+    );
   const selected = op.selected_position_id ?? record.selected_position_id;
   if (typeof selected !== 'string' || !selected.trim())
     fail('Research registration requires the user-selected selected_position_id');
@@ -347,7 +367,7 @@ function createStore(root = __dirname, options = {}) {
     for (const name of TABLES) {
       const p = path.join(root, name + '.csv');
       state[name] = fs.existsSync(p)
-        ? parseCSV(fs.readFileSync(p, 'utf8'))
+        ? parseCSV(readUtf8(p))
         : { header: HEADERS[name] || [], rows: [] };
     }
     return state;

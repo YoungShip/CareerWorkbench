@@ -220,6 +220,7 @@ test('real CLI JSON and due dry-run are side-effect-free in isolated data', () =
       'dashboard/todo.js',
       'discovery/research.js',
       'lib/python-runtime.js',
+      'lib/reminder-health.js',
     ]) {
       const target = path.join(project, rel);
       fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -307,5 +308,19 @@ test('open jobs with a deadline become reminder events; closed jobs and covered 
     core.planDue(core.collectEvents(extra, new Date('2026-09-21T22:00:00+08:00')), {}, 'toast')[0]
       .id,
     '2h'
+  );
+});
+
+test('date-only deadlines get an extra same-day morning reminder', () => {
+  const ev = event({ deadline: '2026-09-21', event_type: '网申截止' });
+  const at = (h) => new Date(`2026-09-21T${h}:00+08:00`);
+  const ids = (now) => core.planDue(core.collectEvents([ev], now), {}, 'toast').map((g) => g.id);
+  assert.deepEqual(ids(at('08:30')), ['24h']);
+  assert.deepEqual(ids(at('09:05')), ['day']);
+  assert.deepEqual(ids(at('22:30')), ['2h']);
+  const timed = event({ deadline: '2026-09-21 17:00', event_type: '网申截止' });
+  assert.deepEqual(
+    core.planDue(core.collectEvents([timed], at('09:05')), {}, 'toast').map((g) => g.id),
+    ['24h']
   );
 });

@@ -40,6 +40,36 @@ function parseQueryArgs(argv) {
   }
   return options;
 }
+// 主表里登记证据的路径字段：文件不存在时列出来（只读，不改主表）
+function checkArtifacts(snap) {
+  const { resolveArtifactPath } = require('../lib/artifact-paths');
+  const fs = require('node:fs');
+  const missing = [];
+  let checked = 0;
+  for (const job of snap.tables.job_pool)
+    for (const field of ['matching_file', 'research_file']) {
+      const value = String(job[field] || '').trim();
+      if (!value) continue;
+      checked++;
+      const resolved = resolveArtifactPath(value);
+      if (!fs.existsSync(resolved))
+        missing.push({
+          job_id: job.job_id,
+          company: job.company,
+          job_title: job.job_title,
+          status: job.status,
+          field,
+          path: value,
+        });
+    }
+  return {
+    revision: snap.revision,
+    read_only: true,
+    checked,
+    missing_count: missing.length,
+    missing,
+  };
+}
 try {
   const parsed = extractOut(process.argv.slice(2)),
     args = parsed.args,
@@ -63,6 +93,9 @@ try {
       if (argv.length) throw Error('rules takes no options');
       result = service.rules();
     } else result = service.brief({ limit });
+  } else if (command === 'check-artifacts') {
+    if (file !== undefined) throw Error('check-artifacts takes no options except --out');
+    result = checkArtifacts(store.snapshot());
   } else if (command === 'preview' || command === 'apply') {
     if (!file || rest.length) throw Error(command + ' requires exactly one plan JSON file');
     result = store.commit(readJson(file), command === 'preview');
@@ -112,7 +145,7 @@ try {
     result = store.commit(plan);
   } else
     throw new Error(
-      'Usage: node tracker-cli.js snapshot|validate|rules|brief [--limit=8]|query [--job_id=X] [--company=X] [--status=X] [--fields=a,b] [--include_description] [--no_events]|preview plan.json|apply plan.json|initialize migration.json|sync-export payload.json|sync-ack results.json [--out=file.json]'
+      'Usage: node tracker-cli.js snapshot|validate|check-artifacts|rules|brief [--limit=8]|query [--job_id=X] [--company=X] [--status=X] [--fields=a,b] [--include_description] [--no_events]|preview plan.json|apply plan.json|initialize migration.json|sync-export payload.json|sync-ack results.json [--out=file.json]'
     );
   emitJson(result, out);
 } catch (e) {

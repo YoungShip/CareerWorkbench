@@ -44,6 +44,19 @@ function skillsSource() {
     return { in_sync: null, error: e.message };
   }
 }
+function agentsCopies() {
+  try {
+    const d = require('./skills-sync').diffAgents();
+    return d.in_sync
+      ? { in_sync: true }
+      : {
+          ...d,
+          fix: '以 CareerWorkbench/AGENTS.md 为准复制到工作区根与 lapis-cv，lapis-cv 那份随后提交',
+        };
+  } catch (e) {
+    return { in_sync: null, error: e.message };
+  }
+}
 function real(p) {
   try {
     return fs.realpathSync(p).toLowerCase();
@@ -348,6 +361,7 @@ function probePort(port) {
         client_notes: clientNotes,
         target_skill_roots: targetSkillRoots,
         skills_source: skillsSource(),
+        agents_md: agentsCopies(),
         python,
         node: process.execPath,
         checks,
