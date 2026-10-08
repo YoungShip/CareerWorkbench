@@ -20,7 +20,7 @@
 
 挑选最有价值且未占用的公司，按 campus-recruitment 认领、获取完整目录、读取范围内JD、核实额度和机器人延后规则、生成 matching.json 并 verify。研究中的认领由公司调研占用表和 run.checkpoint 留存，不通过 lead.upsert 写 researching；卡点按可支持状态记录。通过校验后用 research.complete 记 researched 并链接报告和校验结果。
 
-本人选定后才通过主表 snapshot → preview → apply → 读回登记待投，并调用 offernotes-sync。无人值守发现任务不填写网申、不上传简历、不提交、不对外发消息。
+本人选定后才通过主表 snapshot → preview → apply → 读回登记待投（OfferNotes 同步已停用，不再调用 offernotes-sync）。无人值守发现任务不填写网申、不上传简历、不提交、不对外发消息。
 
 ## 线索存储与运行记录
 

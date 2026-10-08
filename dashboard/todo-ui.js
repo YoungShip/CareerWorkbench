@@ -95,6 +95,7 @@
       history.append(item);
     }
     host.append(history);
+    if (s.offernotes_sync === false) return;
     const sync = el('details');
     sync.id = 'sync-details';
     sync.append(el('summary', 'OfferNotes 同步明细'));

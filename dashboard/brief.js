@@ -2,6 +2,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { collectEvents, jobDeadlineEvents } = require('../scripts/reminder-core');
+const { offernotesSyncEnabled } = require('../lib/offernotes');
 function currentSection(text, heading = '选岗规则') {
   const lines = String(text)
     .replace(/^\uFEFF/, '')
@@ -52,6 +53,7 @@ function buildBrief(
     discovery = null,
     extraWarnings = [],
     reminderHealth = null,
+    offernotesSync = offernotesSyncEnabled(),
   } = {}
 ) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
@@ -96,7 +98,7 @@ function buildBrief(
     );
   const pending = jobs.filter((j) => j.status === 'Pending'),
     jobsById = new Map(jobs.map((job) => [job.job_id, job]));
-  const syncRows = tables.sync_queue
+  const syncRows = (offernotesSync ? tables.sync_queue : [])
     .filter((row) => row.state !== 'synced')
     .map((row) => {
       const job = jobsById.get(row.job_id) || {};
@@ -129,7 +131,7 @@ function buildBrief(
       jobs: jobs.length,
       statuses: count(jobs, 'status'),
       pending_grades: count(pending, 'match_grade'),
-      sync_queue: count(tables.sync_queue, 'state'),
+      sync_queue: offernotesSync ? count(tables.sync_queue, 'state') : 'disabled',
       discovery: discovery?.counts || null,
     },
     urgent: grouped(report.soon),

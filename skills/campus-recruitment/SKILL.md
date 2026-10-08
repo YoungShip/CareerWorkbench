@@ -7,7 +7,7 @@ metadata:
 
 # Campus recruitment workflow
 
-负责“研究与选择”和“本地投递记录维护”，不负责代填网申页面；表单填写由 `job-application-form-filling` 负责，在线进度视图同步由 `offernotes-sync` 负责。
+负责“研究与选择”和“本地投递记录维护”，不负责代填网申页面；表单填写由 `job-application-form-filling` 负责。在线进度视图同步（`offernotes-sync`）当前停用，本地主表即最终记录。
 
 ## Hard boundaries
 
@@ -65,7 +65,7 @@ snapshot → build plan with expected_revision → preview → apply → snapsho
 
 新岗位用稳定新 `job_id` 登记 `Pending` 或等价待投状态，保留未修改字段。由未投转 `Submitted` 时，同一计划必须追加含真实证据的申请日志和实际日期。不得把计划日期、页面打开或预览结果写成提交事实。旧 schema 记录可读取展示，但没有完成迁移和新校验前不得当作新标准通过。
 
-本地写入成功后检查 `sync_queue`，交由 `offernotes-sync` 完成在线视图同步。在线同步失败时保留 `pending/error`，不能把本地保存说成线上完成。
+本地写入读回成功即完成登记。在线视图同步当前停用，写入不进入 `sync_queue`；仅当本人恢复同步（`JOBHUNT_OFFERNOTES_SYNC=1`）时，才检查队列并交由 `offernotes-sync` 处理，失败保留 `pending/error`，不能把本地保存说成线上完成。
 
 ## References
 

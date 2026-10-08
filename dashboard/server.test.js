@@ -1,3 +1,5 @@
+// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
+process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

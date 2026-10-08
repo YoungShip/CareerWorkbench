@@ -7,6 +7,8 @@ metadata:
 
 # Online progress synchronization
 
+> **当前停用（2026-10-09 起）**：主表写入不再进入 `sync_queue`，摘要不再提示同步。仅当本人明确要求恢复并设置 `JOBHUNT_OFFERNOTES_SYNC=1` 后才使用本 Skill；停用期间不要主动打开、登录或修改 OfferNotes。
+
 负责“已核实本地变更 → 在线进度视图”的同步，不负责公司研究、网申填写或最终投递提交。在线视图是派生视图；本地主表和真实提交证据是权威来源。
 
 ## Hard boundaries

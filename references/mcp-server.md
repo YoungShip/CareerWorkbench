@@ -40,7 +40,7 @@ CLI 约定是 `preview → apply → 读回`，但约定只靠提示词维持，
 2. `tracker_apply` 必须带回**同一份计划**和令牌。计划按键排序规范化后比对，字段顺序不同不影响，内容任何改动都会拒绝。
 3. 令牌 10 分钟过期；密钥每次启动随机生成，重启后旧令牌全部失效。
 4. 计划内含 `expected_revision`，所以令牌间接绑定了预览时的主表版本；预览后若有其他写入，store 的乐观锁会返回 `Revision conflict`，需重新读取、重新预览。同一令牌重放也会因此被拒。
-5. apply 成功后自动按 `changed_jobs` 定向读回本次改动字段，并提示改动已进入 `sync_queue`（pending），不代表线上已同步。
+5. apply 成功后自动按 `changed_jobs` 定向读回本次改动字段。OfferNotes 同步停用时 `sync` 提示“主表即为最终记录”；开启时提示改动已进入 `sync_queue`（pending），不代表线上已同步。
 
 计划根对象为严格模式，`runtime` 等额外字段直接拒绝（store 本身也拒绝计划携带 runtime）。
 

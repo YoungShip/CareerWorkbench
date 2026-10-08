@@ -110,9 +110,9 @@ Windows 手动打开：dashboard/start-dashboard-silent.bat。登录自启任务
 
 ## 数据与写入
 
-八份 dashboard CSV 是唯一投递主数据，旧 Excel 保留历史用途；OfferNotes 为同步视图。不要用表格软件直接修改 CSV。
+八份 dashboard CSV 是唯一投递主数据，旧 Excel 保留历史用途；OfferNotes 同步自 2026-10-09 起默认停用（`JOBHUNT_OFFERNOTES_SYNC=1` 可恢复）。不要用表格软件直接修改 CSV。
 
-按稳定 job_id 与整体版本执行 snapshot → preview → apply → read-back。本地保存后处理同步队列，在线读回成功才记同步完成。研究结论、用户选岗、实际提交是不同事实。完整规则见 [主表协议](references/local-tracker.md)。
+按稳定 job_id 与整体版本执行 snapshot → preview → apply → read-back。本地读回即完成登记；恢复 OfferNotes 同步时，在线读回成功才记同步完成。研究结论、用户选岗、实际提交是不同事实。完整规则见 [主表协议](references/local-tracker.md)。
 
 会话只读入口：
 

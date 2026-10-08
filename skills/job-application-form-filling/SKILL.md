@@ -7,7 +7,7 @@ metadata:
 
 # Job application form filling
 
-负责“已经选定岗位后的表单准备与填写”。公司研究、岗位匹配和投递表登记由 `campus-recruitment` 负责；提交后的本地/在线进度同步由 `offernotes-sync` 负责。
+负责“已经选定岗位后的表单准备与填写”。公司研究、岗位匹配和投递表登记由 `campus-recruitment` 负责；提交后的登记在本地主表完成；在线进度同步（`offernotes-sync`）当前停用。
 
 ## Hard boundaries
 
@@ -26,7 +26,7 @@ metadata:
 通道优先级按当前运行时能力选择：①已授权日常 Chrome 插件 → ②内置浏览器 → ③A Playwright 专用持久化 profile → ③B Raw CDP 专用通道。前一级能可靠完成且可读回时不升级。
 
 - **③A Playwright**：适合 ATS UI。优先 data-cy、label、role、可见文本和真实 option；利用 actionability/auto-wait 拒绝被遮挡或不可交互的元素。必要的组件级 JavaScript 只针对已经精确定位的目标，并在操作后读回。
-- **③B Raw CDP**：适合 OfferNotes/API 级精确同步和诊断。不得因为能执行 Runtime.evaluate 就把它当成普通网申默认方案。
+- **③B Raw CDP**：适合 API 级精确操作和诊断。不得因为能执行 Runtime.evaluate 就把它当成普通网申默认方案。
 - **远程登录接管**：遇首次注册、短信/扫码/2FA/CAPTCHA 时暂停在当前专用浏览器页面，用户可在本机或已授权远程桌面完成；之后从当前页续跑。不要要求用户把验证码、密码、Cookie 或 token 发进聊天。
 - **失败接管**：同一字段依次尝试语义 locator/真实选项、组件特定方法/键盘、一次可恢复的安全重入；仍失败返回 needs-human。刷新前确认未保存状态是否会丢失。
 - **提交模式**：

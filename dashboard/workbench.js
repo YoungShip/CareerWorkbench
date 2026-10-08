@@ -557,6 +557,13 @@
     if (!events().length) empty($('event-list'), '暂无日程。');
   }
   function renderSync() {
+    if (snapshot.offernotes_sync === false) {
+      $('sync-status').textContent = '本地已保存';
+      $('sync-summary').textContent = '已停用';
+      $('nav-sync-count').textContent = '—';
+      empty($('sync-rows'), 'OfferNotes 同步已停用，进度以本地主表为准。');
+      return;
+    }
     const queue = snapshot.tables.sync_queue,
       pending = queue.filter((q) => q.state !== 'synced'),
       names = { synced: '已同步', pending: '待同步', error: '同步失败' };

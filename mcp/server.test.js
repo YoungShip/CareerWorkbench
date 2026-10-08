@@ -1,3 +1,5 @@
+// 本文件覆盖 OfferNotes 同步路径（默认停用），整体显式开启；停用行为见 offernotes-disabled.test.js
+process.env.JOBHUNT_OFFERNOTES_SYNC = '1';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -12,7 +14,11 @@ const { canonical } = require('./tools');
 
 test('auxiliary-only writes do not claim that jobs entered the sync queue', () => {
   const { createToolHandlers } = require('./tools');
-  const service = { store: { commit: () => ({ changed_jobs: [], counts: { resume_rules: 1 } }) } };
+  const store = {
+    offernotesSync: true,
+    commit: () => ({ changed_jobs: [], counts: { resume_rules: 1 } }),
+  };
+  const service = { store };
   const handlers = createToolHandlers({ service, tokens: { verify() {} } });
   const result = handlers.apply({
     plan: { operations: [{ type: 'table.upsert', table: 'resume_rules' }] },
@@ -21,6 +27,11 @@ test('auxiliary-only writes do not claim that jobs entered the sync queue', () =
   assert.equal(result.readback, null);
   assert.match(result.sync, /未新增岗位同步项/);
   assert.doesNotMatch(result.sync, /已进入 sync_queue/);
+  store.offernotesSync = false;
+  assert.match(
+    handlers.apply({ plan: { operations: [] }, preview_token: 'fixture' }).sync,
+    /同步已停用/
+  );
 });
 
 function fixture(t) {

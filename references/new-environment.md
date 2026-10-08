@@ -46,7 +46,7 @@ node dashboard/tracker-cli.js brief
 | 公司调研、逐岗匹配、改简历措辞、改代码 | 能 | 能 |
 | 查看投递进度 | 能，读 `tracker-backup/`（最多晚一天） | 能，读实时主表 |
 | 写入主表（登记投递、更新阶段） | 不建议，会和作者电脑分叉 | 能 |
-| 网申填写与提交、OfferNotes 同步 | 不能：登录态在作者电脑的专用浏览器 profile 里 | 能，按 AGENTS.md 第 0、7、8 条 |
+| 网申填写与提交 | 不能：登录态在作者电脑的专用浏览器 profile 里 | 能，按 AGENTS.md 第 0、7、8 条 |
 | 到期提醒、主表备份 | 不能：依赖 Windows 计划任务 | 自动运行 |
 
 云端会话通过 Remote Desktop Commander 操作作者电脑的规则见 AGENTS.md 第 14 条，本机路径、端口和设备见 [local-setup.md](local-setup.md)。
@@ -65,7 +65,7 @@ node dashboard/tracker-cli.js brief
 |---|---|
 | 第 1、3、4、6、10、12 条 | 照常适用 |
 | 第 2 条主表 | 只读：从备份恢复后只用 `brief`、`query`、`rules`、`validate`，不 `apply` |
-| 第 5 条 | OfferNotes 同步做不了；公司调研占用表照常认领 |
+| 第 5 条 | OfferNotes 同步已停用，无需处理；公司调研占用表照常认领 |
 | 第 9 条到期提醒 | 只做第 ① 项：用恢复的主表跑 `brief`，说明数据最多晚一天 |
 | 第 11 条站点经验 | 本地观察在 `data/private/site-knowledge/`，不入库，云端读不到；只用技能里的通用 `site-knowledge.md`，抓目录时按现场页面核实 |
 | 第 13 条仓库同步 | 适用；调研产物见下 |

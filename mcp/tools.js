@@ -127,9 +127,11 @@ function createToolHandlers(options = {}) {
       return {
         ...result,
         readback,
-        sync: result.changed_jobs.length
-          ? '改动已进入 sync_queue（pending），线上 OfferNotes 尚未同步，需按 offernotes-sync 处理'
-          : '本次未改变岗位记录，未新增岗位同步项；既有队列状态仍以完整核查为准',
+        sync: !store.offernotesSync
+          ? 'OfferNotes 同步已停用，主表即为最终记录'
+          : result.changed_jobs.length
+            ? '改动已进入 sync_queue（pending），线上 OfferNotes 尚未同步，需按 offernotes-sync 处理'
+            : '本次未改变岗位记录，未新增岗位同步项；既有队列状态仍以完整核查为准',
       };
     },
   };

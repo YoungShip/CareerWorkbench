@@ -23,7 +23,7 @@ node CareerWorkbench/dashboard/tracker-cli.js preview <计划文件绝对路径>
 node CareerWorkbench/dashboard/tracker-cli.js apply <计划文件绝对路径>
 ```
 
-brief 只读汇总主表临期事项、discovery 临近截止候选、规则复核与同步积压；文本提取的 discovery 日期必须回官方来源确认。query 返回按需字段及 expected_revision 所需的整体 revision，snapshot 返回全部表和同一口径 revision。日常查询先 brief/query，缺少字段再按需补读；未返回字段不代表空值，不得据此清空原值。同步队列详情仍须 snapshot 核查。所有 JSON 输出命令可用 `--out=<绝对路径>` 由程序原子写出严格 UTF-8 文件，避免旧 Windows shell 重定向损坏中文。用脚本解析 JSON，不用按行 grep 推算 CSV 记录数。中文、逗号、引号和换行均合法。
+brief 只读汇总主表临期事项、discovery 临近截止候选、规则复核与同步积压（同步停用时不含）；文本提取的 discovery 日期必须回官方来源确认。query 返回按需字段及 expected_revision 所需的整体 revision，snapshot 返回全部表和同一口径 revision。日常查询先 brief/query，缺少字段再按需补读；未返回字段不代表空值，不得据此清空原值。同步队列详情仍须 snapshot 核查。所有 JSON 输出命令可用 `--out=<绝对路径>` 由程序原子写出严格 UTF-8 文件，避免旧 Windows shell 重定向损坏中文。用脚本解析 JSON，不用按行 grep 推算 CSV 记录数。中文、逗号、引号和换行均合法。
 
 CLI 输出的 JSON 需要落盘时用 `--out=<绝对路径>`，由程序以严格 UTF-8 原子写入；不要用旧版 Windows PowerShell 的文本管道保存中文 JSON。
 
@@ -66,7 +66,7 @@ Windows 上若 `apply` 报 `EPERM ... rename <表>.csv.tmp-* -> <表>.csv`，先
   - position_id 与 job_id 不假设相同：默认要求 `job_id === selected_position_id`；若两者本就不同，须用 `position_job_map` 显式声明映射，例如 `{"role-1":"job_xxx"}`。
   历史岗位的备注、测评、面试与提交证据维护走 `job.patch`/`log.add`/`event.*`，**不经过**登记许可，无需重做研究。
 - `job.patch`：job_id + patch，仅更新列出的字段，未列字段保留。job_id 不可改。
-- `job.delete`：仅用于本人明确要求删除的岗位，提供 reason。已有 OfferNotes ID 时先备份并删除本人线上对应记录、读回确认不存在，再提供 deleted_offernotes_id（须与原ID一致）。默认拒绝有申请日志或日程的岗位；本人明确要求连同当前记录移除时，须先归档历史，提供 archive_history:true、expected_log_ids 和 expected_event_ids，两个列表必须与当前历史 ID 完全一致。本地事务备份全部表后，删除该岗位、关联日志、日程及同步队列，备份保留供恢复。删除投递记录不代表撤回网申，也不抹除曾投递的事实。
+- `job.delete`：仅用于本人明确要求删除的岗位，提供 reason。同步开启时，已有 OfferNotes ID 须先备份并删除本人线上对应记录、读回确认不存在，再提供 deleted_offernotes_id（须与原ID一致）；同步停用时不需要。默认拒绝有申请日志或日程的岗位；本人明确要求连同当前记录移除时，须先归档历史，提供 archive_history:true、expected_log_ids 和 expected_event_ids，两个列表必须与当前历史 ID 完全一致。本地事务备份全部表后，删除该岗位、关联日志、日程及同步队列，备份保留供恢复。删除投递记录不代表撤回网申，也不抹除曾投递的事实。
 - `log.add`：job_id + log_id（可省略自动生成）+ record。由未投变 Submitted 时，必须同计划追加 Submitted 日志，含 submission_evidence / confirmation_url / confirmation_text 至少一项，并有真实投递证据；不把登记当投递。填写 application_date 为实际投递日。
 - `event.add` / `event.patch`：job_id + event_id（新增可自动生成）+ record；date、event_type 必填，time 未知可空。阶段事件可填 stage、stage_status。普通日程 stage 留空，不猜招聘阶段。不用日程文字覆盖当前实际招聘阶段。
 - `event.delete`：job_id + event_id，只删除本地日程。删除日程不等于撤回申请或清除线上已经发生的招聘阶段；线上有冲突交由同步流程核实。
@@ -101,6 +101,8 @@ cohort_match_status 只表示官网当届开放核实情况，与本人是否延
 follow_up.stage：0投递、1笔试/测评、2一面、3二面、4三面、5Offer。stage_status：1待办、6完成待通知、4通过、5被拒、3放弃、2仅无后续反馈的已办。日期按该环节真实日期，时间未知不要编造。
 
 ## OfferNotes
+
+**同步已停用（2026-10-09 本人决定）**：本人实际只通过 AI 或电脑查看进度。`createStore` 默认不再写入 sync_queue（已有记录保留不处理），brief 的 `counts.sync_queue` 为 `disabled`、不出现同步提示，网页同步页显示“已停用”，`job.delete` 不再要求 `deleted_offernotes_id`。下文的同步规则仅在本人恢复同步、设置环境变量 `JOBHUNT_OFFERNOTES_SYNC=1` 后适用。
 
 ### 网页待办与完成登记
 

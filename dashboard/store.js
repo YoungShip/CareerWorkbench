@@ -5,6 +5,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { jobIds: eventJobIds } = require('./todo');
 const { validateMatchingArtifact, defaultRuntime } = require('../discovery/research');
+const { offernotesSyncEnabled } = require('../lib/offernotes');
 const TABLES = [
   'job_pool',
   'application_log',
@@ -318,7 +319,8 @@ function createStore(root = __dirname, options = {}) {
   const internal = path.join(root, '.store'),
     lock = path.join(internal, 'lock'),
     journal = path.join(internal, 'journal.json'),
-    backupKeepDays = options.backupKeepDays ?? 30;
+    backupKeepDays = options.backupKeepDays ?? 30,
+    offernotesSync = options.offernotesSync ?? offernotesSyncEnabled();
   fs.mkdirSync(internal, { recursive: true });
   function locked(fn) {
     try {
@@ -507,6 +509,7 @@ function createStore(root = __dirname, options = {}) {
         revision: revision(s),
         tables: Object.fromEntries(TABLES.map((n) => [n, s[n].rows])),
         warnings: warnings(s),
+        offernotes_sync: offernotesSync,
       };
     });
   }
@@ -709,7 +712,7 @@ function createStore(root = __dirname, options = {}) {
                 'Cannot delete a job with application history or events without explicit exact history archive'
               );
           }
-          if (job.offernotes_id && op.deleted_offernotes_id !== job.offernotes_id)
+          if (offernotesSync && job.offernotes_id && op.deleted_offernotes_id !== job.offernotes_id)
             fail('Verified remote deletion ID is required');
           s.application_log.rows = s.application_log.rows.filter((r) => r.job_id !== job.job_id);
           s.follow_up.rows = s.follow_up.rows.filter((r) => r.job_id !== job.job_id);
@@ -785,7 +788,7 @@ function createStore(root = __dirname, options = {}) {
         } else fail('Unknown operation: ' + op.type);
         changes.add(job.job_id);
       }
-      for (const jobId of changes) {
+      for (const jobId of offernotesSync ? changes : []) {
         const q = {
           job_id: jobId,
           change_id: id('change'),
@@ -835,7 +838,7 @@ function createStore(root = __dirname, options = {}) {
       return result;
     });
   }
-  return { snapshot, query, commit, initialize, exportCsv };
+  return { snapshot, query, commit, initialize, exportCsv, offernotesSync };
 }
 function validDate(value) {
   return (

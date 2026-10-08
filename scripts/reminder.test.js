@@ -221,6 +221,7 @@ test('real CLI JSON and due dry-run are side-effect-free in isolated data', () =
       'discovery/research.js',
       'lib/python-runtime.js',
       'lib/reminder-health.js',
+      'lib/offernotes.js',
     ]) {
       const target = path.join(project, rel);
       fs.mkdirSync(path.dirname(target), { recursive: true });
