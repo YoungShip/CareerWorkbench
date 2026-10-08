@@ -1,6 +1,7 @@
 {
-  "repository": "https://github.com/YoungShip/job-application-workflow-skills",
-  "revision": "8f080f466f0917937b65f0bc50c929ed6c2e22ea",
+  "repository": "https://github.com/YoungShip/CareerWorkbench",
+  "revision": "5f60af2398b542e38213c44adff0a847dbb2076c",
+  "path": "skills/campus-recruitment/scripts",
   "scope": "仅独立离线演示的固定发布依赖；生产仍使用工作区配置的Skill。",
   "normalization": "UTF-8文本仅规范CRLF为LF",
   "files": {
