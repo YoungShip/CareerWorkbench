@@ -14,7 +14,7 @@
 ## 现行口径
 
 - **工作流已冻结**（2026-10-09 本人决定：之后专心投递）：除非流程出 bug 或挡住了投递，不再改 CareerWorkbench 和 lapis-cv 的工作流、规则和工具；平时想到的改进只记进 `CareerWorkbench/references/project-backlog.md`，秋招结束后再评估。修 bug 时只做挡路问题所需的最小改动。
-- **投递主数据**：`CareerWorkbench/dashboard/` 的 CSV 是唯一投递主数据。原 Excel 已于 2026-10-09 删除，原有内容保存在 job_pool 的 `legacy_record` 字段，原文件可从 yxp-cv 的 git 历史（提交 00f589a 之前）取回。
+- **投递主数据**：私有仓库 yxp-cv（本机文件夹 lapis-cv）`tracker/` 下的八份 CSV 是唯一投递主数据（2026-10-09 本人决定从本机 `CareerWorkbench/dashboard/` 迁入，云端和本机都可以读写）。只通过 tracker-cli / MCP / 本地看板读写：它们在专用 worktree `CareerWorkbench/data/private/tracker-worktree` 里读前拉取、写后提交并推送 main；推送冲突时本次写入撤回，按最新主表重新 preview → apply。不要直接改 `lapis-cv/tracker/` 下的文件。原 Excel 已于 2026-10-09 删除，原有内容保存在 job_pool 的 `legacy_record` 字段，原文件可从 yxp-cv 的 git 历史（提交 00f589a 之前）取回。
 - **OfferNotes 已移出工作流**（2026-10-09 本人决定：实际只由 AI 或电脑查看进度）。同步代码、命令、offernotes-sync 技能和 ③B Raw CDP 通道已删除；主表即最终记录，`sync_queue` 表和 `offernotes_id` 列只保留历史数据。不再打开、登录或修改 OfferNotes。
 - **简历版本**：按岗位方向选标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用。央国企、银行和研究所同样按方向选 A/C，不再维护或选择独立的国企版。历史投递所用的版本、材料快照和日志保留原样；新申请只从母表当前的附件索引取文件。
 - **资料更新闭环**：新增或修改简历中的项目，必须同步母表的结构化项目及对应网申文本组，运行 `lapis-cv/scripts/generate_application_materials.py`，再通过 `jobmatch check-materials`；不能只改 PDF 或自我介绍。候选资料、经历库、回答库和申请规则都是生成视图；资料未同步时，实际匹配要停下并提示修复。旧匹配结果按冻结时的证据版本复核，历史投递不改写。
@@ -100,7 +100,7 @@ CareerWorkbench 与 lapis-cv 都是 git 仓库（origin 见本机配置）。
 - **及时提交**：工作流文件（AGENTS.md、references/、scripts/、skills/、docs/、schemas/、examples/、dashboard/ 适配器、discovery/、templates/ 等）凡经本人确认的修改，在当次会话结束前 `git add <具体文件> → commit → push origin main`，不积压未提交的漂移。commit message 简短说明动机。
 - **开工检查**：会话开始处理投递任务时，顺带运行 `git status -sb` 检查漂移；发现未提交的改动，先向本人说明再提交。
 - **红线**：
-  - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交到 CareerWorkbench。
+  - gitignore 已排除的私有数据（data/*、dashboard/*.csv、.store、tmp、logs、私密信息.json 等）永不提交到 CareerWorkbench。主表的提交和推送由 tracker-cli 在 yxp-cv 里自动完成，不手工提交 `tracker/`。
   - 唯一例外是主表异地备份：八份 CSV 由 `scripts/backup-tracker.js` 每天原样快照到私有的 `lapis-cv/tracker-backup/`（2026-10-09 本人确认不打码，和证据目录一致；`JOBHUNT_BACKUP_REDACT=1` 可恢复打码），只提交该目录和下面的证据目录；不改主表本身，恢复以本机主表为准。
   - 同一次提交把 `CareerWorkbench/data/private` 里的证据（投递凭据、站点经验、重评与调研结果等）原样镜像到私有的 `lapis-cv/private-evidence/`（2026-10-09 本人确认不打码）。不镜像浏览器登录配置、`secrets`、模型/发布/运行/评测产物和缓存；源里删掉的文件镜像里也删。这个目录只能留在私有仓库，不得复制到 CareerWorkbench 或任何公开位置。
   - 同一次提交还把只在本机的工作资料原样镜像到 `lapis-cv/local-backup/`：公司发现数据（`discovery/`）、主表 matching_file/research_file 引用到的 `lapis-cv/tmp` 目录（`lapis-cv-tmp/`，整个 tmp 不镜像）、resume 工作区根目录的散文件（`workspace-root/`，不含 . 开头的配置）。

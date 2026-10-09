@@ -28,7 +28,7 @@ function workspace(t) {
   fs.mkdirSync(docs, { recursive: true });
   for (const name of ['cli.js', 'store.js', 'research.js', 'view.js', 'v2-fixture.js'])
     fs.copyFileSync(path.join(__dirname, name), path.join(project, 'discovery', name));
-  for (const name of ['json-output.js', 'artifact-paths.js', 'python-runtime.js'])
+  for (const name of ['json-output.js', 'artifact-paths.js', 'python-runtime.js', 'tracker-git.js'])
     fs.copyFileSync(path.resolve(__dirname, '../lib', name), path.join(project, 'lib', name));
   for (const name of ['store.js', 'todo.js'])
     fs.copyFileSync(

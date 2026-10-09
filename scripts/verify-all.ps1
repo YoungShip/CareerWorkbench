@@ -97,7 +97,7 @@ Invoke-Step 'site knowledge metadata' {
 
 Invoke-Step 'CareerWorkbench node tests' {
   $tests = @(
-    Get-ChildItem (Join-Path $MainRepo 'dashboard'),(Join-Path $MainRepo 'discovery'),(Join-Path $MainRepo 'scripts'),(Join-Path $MainRepo 'mcp') -Filter '*.test.js' -File |
+    Get-ChildItem (Join-Path $MainRepo 'dashboard'),(Join-Path $MainRepo 'discovery'),(Join-Path $MainRepo 'scripts'),(Join-Path $MainRepo 'mcp'),(Join-Path $MainRepo 'lib') -Filter '*.test.js' -File |
       ForEach-Object { $_.FullName }
   )
   Invoke-CapturedNative 'node --test' { & node --test @tests }

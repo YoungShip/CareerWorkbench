@@ -3,9 +3,11 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createStore } = require('./store');
 const TodoRules = require('./todo');
-const store = createStore(process.env.JOBHUNT_DATA_DIR || __dirname);
+const { createTrackerService } = require('../lib/tracker-service');
+// 与 CLI 同一套主表位置解析；主表在仓库里时读前拉取、写后推送
+const service = createTrackerService({ projectDir: path.resolve(__dirname, '..') });
+const store = service.store;
 const PORT = Number(process.env.JOBHUNT_PORT || 8420);
 function send(res, status, data) {
   res.writeHead(status, {
@@ -30,7 +32,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/health')
       return send(res, 200, { application: 'career-workbench', pid: process.pid, root: __dirname });
     if (req.method === 'GET' && url.pathname === '/api/snapshot')
-      return send(res, 200, store.snapshot());
+      return (service.sync({ strict: false }), send(res, 200, store.snapshot()));
     const assets = {
       '/todo.js': 'application/javascript',
       '/todo-ui.js': 'application/javascript',
@@ -106,7 +108,7 @@ const server = http.createServer(async (req, res) => {
     else return send(res, 404, { error: 'Not found' });
     return send(res, 200, {
       ok: true,
-      ...store.commit({ expected_revision: p.expected_revision, operations }),
+      ...service.commitPlan({ expected_revision: p.expected_revision, operations }),
     });
   } catch (e) {
     send(res, e.httpStatus || 400, { ok: false, error: e.message });

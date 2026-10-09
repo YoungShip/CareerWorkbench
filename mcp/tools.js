@@ -83,19 +83,25 @@ function createToolHandlers(options = {}) {
     store = service.store;
   const tokens = options.tokens || createPreviewTokens(options);
   const discovery = () => createDiscoveryStore(service.paths.discoveryRoot).snapshot();
+  // 主表在仓库里时读前拉取（失败只警告、继续用本地数据），写入走 commitPlan
+  const fresh = () => service.sync && service.sync({ strict: false });
+  const commit = (plan, dryRun) =>
+    service.commitPlan ? service.commitPlan(plan, dryRun) : store.commit(plan, dryRun);
   return {
-    brief: ({ limit = 8 } = {}) => service.brief({ limit }),
+    brief: ({ limit = 8 } = {}) => (fresh(), service.brief({ limit })),
     rules: () => service.rules(),
-    validate: () => service.validate(),
-    query: (args = {}) =>
-      store.query({
+    validate: () => (fresh(), service.validate()),
+    query: (args = {}) => {
+      fresh();
+      return store.query({
         job_ids: args.job_ids || [],
         fields: args.fields || [],
         company: args.company,
         status: args.status,
         include_description: !!args.include_description,
         with_events: args.with_events !== false,
-      }),
+      });
+    },
     discoveryNext: ({ limit = 8, horizon_hours = 168 } = {}) =>
       buildDiscoveryNext(discovery(), { limit, horizonHours: horizon_hours }),
     discoveryQuery: (args = {}) =>
@@ -108,7 +114,7 @@ function createToolHandlers(options = {}) {
       }),
     preview({ plan }) {
       assertAllowed(plan);
-      const result = store.commit(plan, true);
+      const result = commit(plan, true);
       return {
         ...result,
         preview_token: tokens.issue(plan),
@@ -119,7 +125,7 @@ function createToolHandlers(options = {}) {
     apply({ plan, preview_token }) {
       assertAllowed(plan);
       tokens.verify(preview_token, plan);
-      const result = store.commit(plan);
+      const result = commit(plan, false);
       const readback = result.changed_jobs.length
         ? store.query({ job_ids: result.changed_jobs, fields: readbackFields(plan) })
         : null;

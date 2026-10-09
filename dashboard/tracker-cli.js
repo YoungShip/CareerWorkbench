@@ -76,6 +76,9 @@ try {
     out = parsed.out;
   const [command, file, ...rest] = args;
   let result;
+  // 主表在仓库里时，读命令先拉取（失败只警告），写命令在 commitPlan 里严格拉取并在写后推送
+  if (['snapshot', 'validate', 'query', 'brief', 'check-artifacts'].includes(command))
+    for (const w of service.sync({ strict: false }).warnings) console.error('警告：' + w);
   if (command === 'snapshot' || command === 'validate') {
     if (file !== undefined) throw Error(command + ' takes no options except --out');
     result = command === 'validate' ? service.validate() : store.snapshot();
@@ -98,9 +101,10 @@ try {
     result = checkArtifacts(store.snapshot());
   } else if (command === 'preview' || command === 'apply') {
     if (!file || rest.length) throw Error(command + ' requires exactly one plan JSON file');
-    result = store.commit(readJson(file), command === 'preview');
+    result = service.commitPlan(readJson(file), command === 'preview');
   } else if (command === 'initialize') {
     if (!file || rest.length) throw Error('initialize requires exactly one migration JSON file');
+    if (service.gitBacked) throw Error('主表已在仓库里，不能再 initialize');
     result = store.initialize(readJson(file));
   } else
     throw new Error(

@@ -1,6 +1,8 @@
 # 备份与恢复
 
-每次主表事务先复制八份 CSV 到 dashboard/.store/backups/<时间-UUID>/，再写入新数据。未完成的事务由下一次 store 读取自动从 journal 指定备份回滚。不要手工删除 journal 或锁来强行绕过正在运行的写入。
+主表在私有仓库 `tracker/` 里（2026-10-09 起），每次写入都是 yxp-cv main 上的一次提交，按提交恢复即可；下面的本机事务备份在 `tracker/.store/backups/`（不入库）。
+
+每次主表事务先复制八份 CSV 到数据目录的 .store/backups/<时间-UUID>/，再写入新数据。未完成的事务由下一次 store 读取自动从 journal 指定备份回滚。不要手工删除 journal 或锁来强行绕过正在运行的写入。
 
 备份保留规则：每次事务成功后自动清理，最近 30 天的备份全部保留，更早的每天只留最后一份（`createStore` 的 `backupKeepDays` 选项可调）。因此恢复到 30 天前时，只能精确到当天最后一次写入后的状态。
 

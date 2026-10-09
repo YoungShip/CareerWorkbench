@@ -57,6 +57,13 @@ class Paths:
 
     @property
     def tracker_csv(self) -> Path:
+        """与 lib/tracker-git.js 的 locate 同序：JOBHUNT_DATA_DIR > 私有仓库 tracker/ 的专用 worktree > dashboard/。
+        这里只读；需要最新数据时先跑一次 tracker-cli（会拉取）。"""
+        if os.environ.get("JOBHUNT_DATA_DIR"):
+            return Path(os.environ["JOBHUNT_DATA_DIR"]) / "job_pool.csv"
+        if os.environ.get("JOBHUNT_TRACKER_GIT") != "0" and (self.workspace / "lapis-cv" / ".git").exists():
+            worktree = os.environ.get("JOBHUNT_TRACKER_WORKTREE") or self.private / "tracker-worktree"
+            return Path(worktree) / "tracker" / "job_pool.csv"
         return self.project / "dashboard" / "job_pool.csv"
 
     @property

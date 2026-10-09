@@ -12,7 +12,10 @@ const workspace = path.resolve(process.env.JOBHUNT_WORKSPACE_DIR || path.dirname
 const discoveryRoot = path.resolve(
   process.env.JOBHUNT_DISCOVERY_DIR || path.join(project, 'data', 'company-discovery')
 );
-const dashboardRoot = path.resolve(process.env.JOBHUNT_DATA_DIR || path.join(project, 'dashboard'));
+const dashboardRoot = require('../lib/tracker-git').locate({
+  project,
+  workspace,
+}).dataDir;
 const runtime = {
   python: defaultPython(),
   verifier:

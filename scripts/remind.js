@@ -21,7 +21,10 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const core = require('./reminder-core');
 const { parseCSV } = require('../dashboard/store');
-const DATA = process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard');
+const { locate, createTrackerGit } = require('../lib/tracker-git');
+// 主表位置与 tracker-cli 一致：JOBHUNT_DATA_DIR > 私有仓库 lapis-cv 的 tracker/ > dashboard/
+const LOCATION = locate({ project: path.join(ROOT, 'CareerWorkbench'), workspace: ROOT });
+const DATA = LOCATION.dataDir;
 const FU = path.join(DATA, 'follow_up.csv');
 const JOBS = path.join(DATA, 'job_pool.csv');
 const STATE = path.join(ROOT, 'CareerWorkbench/tmp/remind-state.json');
@@ -561,6 +564,7 @@ async function main() {
     '--dry-run',
   ]);
   for (const flag of args) if (!allowed.has(flag)) throw new Error('Unknown reminder option');
+  syncTracker();
   if (args.includes('--json') && args.includes('--due')) {
     const report = collect();
     console.log(
@@ -587,6 +591,16 @@ async function main() {
     release();
     // tmp 自动清理已停用：tmp 里有投递记录和调研报告引用的证据，按修改时间删除会丢证据
     if (args.includes('--all')) startTrackerBackup();
+  }
+}
+// 主表在仓库里时先拉取最新版本；拉不到就用本地已有的数据，并记进日志
+function syncTracker() {
+  if (!LOCATION.git) return;
+  try {
+    for (const w of createTrackerGit(LOCATION.git).refresh({ strict: false }).warnings)
+      logRun('主表拉取：' + w);
+  } catch (e) {
+    logRun('主表拉取失败，使用本地数据：' + e.message);
   }
 }
 // 每晚汇总和登录检查顺带把主表快照备份到 lapis-cv 并推送。推送可能慢，

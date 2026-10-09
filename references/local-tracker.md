@@ -1,6 +1,6 @@
 # 本机投递主数据（2026-09-13 起）
 
-主目录：`CareerWorkbench/dashboard/`（路径相对工作区根 `resume/`，本机位置见 [local-setup.md](local-setup.md)）。八份 CSV 是唯一投递主数据；原 Excel 已于 2026-10-09 删除（内容在 legacy_record 字段，原文件可从 yxp-cv 提交 00f589a 之前的历史取回）。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
+主目录：私有仓库 yxp-cv 的 `tracker/`（2026-10-09 起；之前在 `CareerWorkbench/dashboard/`）。tracker-cli、MCP 和本地看板实际读写的是专用 worktree `CareerWorkbench/data/private/tracker-worktree/tracker/`，不碰本人的 lapis-cv 工作目录：只读命令先拉取（拉不到只警告，继续用本地数据），preview/apply 前严格拉取（拉不到就拒绝），apply 成功后自动提交并推送 main，结果的 `git` 字段写明提交和推送情况（`pending` 表示推送失败、提交留在本地，下一次任何主表命令会补推）。推送被拒且远程 `tracker/` 也变了时，本次写入存成补丁（`tracker/.store/unpushed/`）后撤回，重新 snapshot → preview → apply；不做 CSV 文本合并。`JOBHUNT_DATA_DIR` 可指向别的目录（测试、恢复演练，不同步）；`JOBHUNT_TRACKER_GIT=0` 退回 `dashboard/`。八份 CSV 是唯一投递主数据；原 Excel 已于 2026-10-09 删除（内容在 legacy_record 字段，原文件可从 yxp-cv 提交 00f589a 之前的历史取回）。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
 
 ## 读取与写入
 

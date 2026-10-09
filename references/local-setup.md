@@ -10,7 +10,7 @@
 |---|---|
 | 本项目 | `resume/CareerWorkbench`（origin = YoungShip/CareerWorkbench） |
 | 简历与母表仓库 | `resume/lapis-cv`（origin = YoungShip/yxp-cv，私有；2026-10-09 由 lapis-cv 改名，本机文件夹名不变） |
-| 投递主数据（八份 CSV） | `resume/CareerWorkbench/dashboard/` |
+| 投递主数据（八份 CSV） | 私有仓库 `lapis-cv/tracker/`；工具在 `CareerWorkbench/data/private/tracker-worktree/tracker/` 读写并推送（2026-10-09 起，见 [local-tracker.md](local-tracker.md)） |
 | 选岗规则、经历边界、公司去重索引 | `resume/lapis-cv/秋招/求职档案.md` |
 | 个人资料（网申母表） | `resume/lapis-cv/秋招/网申档案.json` |
 | 两个完整技能 | 运行位置 `resume/.agents/skills/`，版本源 `CareerWorkbench/skills/`（campus-recruitment、job-application-form-filling），两处用 `npm run skills:check` 核对 |
@@ -60,7 +60,9 @@
 
 **tmp 清理**：不再自动运行（2026-10-08 停用：tmp 里有主表和调研报告引用的证据，按修改时间删除会丢证据）。需要时手动预览 `node CareerWorkbench/scripts/clean-tmp.js`，确认没有被引用的文件后才加 `--apply`。需要长期保留的东西不要放在 `tmp/`，应放进 `data/private/`。
 
-**主表异地备份**：每晚汇总和登录检查会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 原样写入 `lapis-cv/tracker-backup/`（2026-10-09 起不打码；设 `JOBHUNT_BACKUP_REDACT=1` 恢复打码和打码后复查）。同一次提交把 `data/private` 里的证据原样镜像到 `lapis-cv/private-evidence/`（不镜像 `playwright-application`、`secrets`、`models`、`agent-runs`、`eval`、`publication-*`、`backup-worktree`、缓存目录、超过 50 MB 或相对路径超过 150 字符的文件；`JOBHUNT_EVIDENCE_DIR` 可改源目录）。同时把只在本机的工作资料原样镜像到 `lapis-cv/local-backup/`：`discovery/`（`data/company-discovery`）、`lapis-cv-tmp/`（主表 matching_file/research_file 引用到的 `lapis-cv/tmp` 条目）、`workspace-root/`（resume 根目录的散文件，不含 . 开头的配置）。只提交这三个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。提交和推送都在独立的 git worktree `CareerWorkbench/data/private/backup-worktree` 里进行（`JOBHUNT_BACKUP_WORKTREE` 可改），基于远程最新版本生成快照，不暂存、不合并、不改写本人的 lapis-cv 工作目录；本人那份 lapis-cv 要 `git pull` 才能看到新快照。推送被拒（别的会话刚推过）时取最新远程重新生成一次。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在独立工作目录里提交、不推送。
+**主表同步**：主表在私有仓库 `tracker/` 里，每次写入都会提交并推送，git 历史就是异地备份。提醒任务每次运行先拉取；拉不到时用本地数据并在 `logs/remind.log` 里记一行“主表拉取失败”。推送和拉取直连失败时改走 `127.0.0.1:7890`（`JOBHUNT_GIT_PROXY` 可改，设为空则不走代理）。
+
+**每日快照**：每晚汇总和登录检查仍会在后台运行 `node CareerWorkbench/scripts/backup-tracker.js --push`，把八份 CSV 原样写入 `lapis-cv/tracker-backup/`（2026-10-09 起不打码；设 `JOBHUNT_BACKUP_REDACT=1` 恢复打码和打码后复查）。同一次提交把 `data/private` 里的证据原样镜像到 `lapis-cv/private-evidence/`（不镜像 `playwright-application`、`secrets`、`models`、`agent-runs`、`eval`、`publication-*`、`backup-worktree`、缓存目录、超过 50 MB 或相对路径超过 150 字符的文件；`JOBHUNT_EVIDENCE_DIR` 可改源目录）。同时把只在本机的工作资料原样镜像到 `lapis-cv/local-backup/`：`discovery/`（`data/company-discovery`）、`lapis-cv-tmp/`（主表 matching_file/research_file 引用到的 `lapis-cv/tmp` 条目）、`workspace-root/`（resume 根目录的散文件，不含 . 开头的配置）。只提交这三个目录，然后推送；直连失败时自动改走 `127.0.0.1:7890` 代理（环境变量 `JOBHUNT_BACKUP_PROXY` 可改，设为空则不走代理）。提交和推送都在独立的 git worktree `CareerWorkbench/data/private/backup-worktree` 里进行（`JOBHUNT_BACKUP_WORKTREE` 可改），基于远程最新版本生成快照，不暂存、不合并、不改写本人的 lapis-cv 工作目录；本人那份 lapis-cv 要 `git pull` 才能看到新快照。推送被拒（别的会话刚推过）时取最新远程重新生成一次。结果记在 `CareerWorkbench/logs/backup.log`。手动运行不加 `--push` 只在独立工作目录里提交、不推送。
 
 ## 客户端接入
 

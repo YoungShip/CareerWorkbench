@@ -9,7 +9,7 @@
 | 仓库 | 可见性 | 放在 | 内容 |
 |---|---|---|---|
 | `YoungShip/CareerWorkbench` | 公开 | `resume/CareerWorkbench` | 工作流代码、规则、三个技能的版本源 `skills/` |
-| `YoungShip/yxp-cv`（原 lapis-cv，2026-10-09 改名） | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、主表每日备份 `tracker-backup/` |
+| `YoungShip/yxp-cv`（原 lapis-cv，2026-10-09 改名） | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、投递主表 `tracker/`（另有每日快照 `tracker-backup/`） |
 | `YoungShip/job-application-workflow-skills` | 公开，已归档 | 不需要克隆 | 旧的技能独立仓库，2026-10-07 并入 CareerWorkbench |
 
 ```sh
@@ -26,17 +26,9 @@ npm test                                        # 应全部通过
 
 `.agents/skills` 是各 AI 客户端加载技能的位置；仓库里的 `skills/` 是版本源，两处用 `npm run skills:check` 核对。
 
-## 恢复投递主表
+## 投递主表
 
-主表（`CareerWorkbench/dashboard/` 下八份 CSV）只在作者电脑上维护，不进 CareerWorkbench。新环境需要时从 lapis-cv 的每日备份恢复：
-
-```sh
-cp ../lapis-cv/tracker-backup/*.csv dashboard/
-node dashboard/tracker-cli.js validate
-node dashboard/tracker-cli.js brief
-```
-
-2026-10-09 起备份是原样内容，恢复后与作者电脑上的主表一致；更早的快照是打码版（测评链接、账号编号、联系方式等显示为 `REDACTED` 或 `***`），需要时从证据目录、原始邮件或招聘系统取回。作者电脑上的主表仍是唯一主数据：两边同时写入会产生分叉，新环境只用于查看或在作者电脑不可用时接替。
+2026-10-09 起主表在 yxp-cv 的 `tracker/` 里，云端和作者电脑读写同一份。两个仓库按上面克隆到同一个父目录后，`node dashboard/tracker-cli.js validate` 会自动在 `data/private/tracker-worktree` 建专用 worktree 并拉取；之后只读命令先拉取，apply 写入后自动提交并推送 main。规则见 [local-tracker.md](local-tracker.md)。
 
 ## 在不同环境能做什么
 
@@ -44,10 +36,10 @@ node dashboard/tracker-cli.js brief
 |---|---|---|
 | 读规则、选岗规则、母表、简历、历史调研 | 能 | 能 |
 | 公司调研、逐岗匹配、改简历措辞、改代码 | 能 | 能 |
-| 查看投递进度 | 能，读 `tracker-backup/`（最多晚一天） | 能，读实时主表 |
-| 写入主表（登记投递、更新阶段） | 不建议，会和作者电脑分叉 | 能 |
+| 查看投递进度 | 能，实时 | 能，实时 |
+| 写入主表（登记投递、更新阶段） | 能，写后自动推送 | 能 |
 | 网申填写与提交 | 不能：登录态在作者电脑的专用浏览器 profile 里 | 能，按 AGENTS.md 第 0、7、8 条 |
-| 到期提醒、主表备份 | 不能：依赖 Windows 计划任务 | 自动运行 |
+| 到期提醒 | 不能：依赖 Windows 计划任务 | 自动运行 |
 
 云端会话通过 Remote Desktop Commander 操作作者电脑的规则见 AGENTS.md 第 14 条，本机路径、端口和设备见 [local-setup.md](local-setup.md)。
 
@@ -55,7 +47,7 @@ node dashboard/tracker-cli.js brief
 
 **先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/yxp-cv`（原 lapis-cv）：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。有的工具会把访问 GitHub 的请求一律改走它自己的授权，给它个人访问令牌也没用（2026-10 试过 Hark）。这类工具只安排公开仓库的事，不要为了它把 lapis-cv 改成公开：仓库里有家人信息、住址和未用的测评链接，公开后收不回来。Claude Code 云端会话里，lapis-cv 要么事先加进环境的仓库来源，要么由本人在对话中要求添加并批准；由定时任务或自动通知发起的会话没有本人确认，添加私有仓库会被拒绝，这时不要换别的办法绕过，停下来说明需要本人授权。
 
-**搭环境。** 两个仓库克隆到同一个父目录（相当于 `resume/`），按上面的命令安装。Python 测试在仓库根目录运行 `uv run --project agent pytest agent/tests`。要看投递进度时，按上一节从 `tracker-backup/` 恢复主表。
+**搭环境。** 两个仓库克隆到同一个父目录（相当于 `resume/`），按上面的命令安装。Python 测试在仓库根目录运行 `uv run --project agent pytest agent/tests`。主表由 tracker-cli 自动从 yxp-cv 拉取，见上一节。
 
 **本机路径换算。** `求职档案.md`、`tracker-cli.js rules` 的输出等处的链接写的是本机绝对路径。把开头的 `D:/AppData/Documents/resume/` 换成云端的工作区根即可，例如 `D:/AppData/Documents/resume/lapis-cv/秋招/X.md` 对应 `<工作区根>/lapis-cv/秋招/X.md`。指向 `CareerWorkbench/tmp/`、`data/private/` 的链接在云端不存在。
 
@@ -64,9 +56,9 @@ node dashboard/tracker-cli.js brief
 | 规则 | 云端 |
 |---|---|
 | 第 1、3、4、6、10、12 条 | 照常适用 |
-| 第 2 条主表 | 只读：从备份恢复后只用 `brief`、`query`、`rules`、`validate`，不 `apply` |
+| 第 2 条主表 | 照常适用，读写同一份仓库主表 |
 | 第 5 条 | 公司调研占用表照常认领 |
-| 第 9 条到期提醒 | 只做第 ① 项：用恢复的主表跑 `brief`，说明数据最多晚一天 |
+| 第 9 条到期提醒 | 只做第 ① 项：跑 `brief` |
 | 第 11 条站点经验 | 本地观察在 `data/private/site-knowledge/`，不入库，云端读不到；只用技能里的通用 `site-knowledge.md`，抓目录时按现场页面核实 |
 | 第 13 条仓库同步 | 适用；调研产物见下 |
 | 第 0、7、8、14 条，`local-setup.md` | 不适用：依赖作者电脑的浏览器登录态或本机 |

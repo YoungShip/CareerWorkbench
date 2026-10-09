@@ -33,7 +33,11 @@ const { execFileSync } = require('node:child_process');
 const { createStore } = require('../dashboard/store');
 
 const ROOT = path.resolve(__dirname, '../..');
-const DATA = process.env.JOBHUNT_DATA_DIR || path.join(ROOT, 'CareerWorkbench/dashboard');
+// 主表位置与 tracker-cli 一致；主表已在仓库 tracker/ 里时，这份快照只是多一份按天的副本
+const DATA = require('../lib/tracker-git').locate({
+  project: path.join(ROOT, 'CareerWorkbench'),
+  workspace: ROOT,
+}).dataDir;
 const REPO = process.env.JOBHUNT_BACKUP_REPO || path.join(ROOT, 'lapis-cv');
 const PROXY = process.env.JOBHUNT_BACKUP_PROXY ?? 'http://127.0.0.1:7890';
 const WORKTREE =
