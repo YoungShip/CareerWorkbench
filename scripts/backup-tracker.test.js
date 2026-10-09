@@ -5,7 +5,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { createStore } = require('../dashboard/store');
-const { backup, redact, findLeaks, isIdCard } = require('./backup-tracker');
+// 默认不镜像本机证据目录；证据镜像单独测试
+process.env.JOBHUNT_EVIDENCE_DIR = path.join(os.tmpdir(), 'cw-no-evidence-' + process.pid);
+const { backup, redact, findLeaks, isIdCard, evidenceFiles } = require('./backup-tracker');
 
 test('redact masks secret URL params and valid ID numbers but keeps job links and IDs', () => {
   const id = '11010519491231002X'; // public GB 11643 sample number
@@ -306,4 +308,67 @@ test('backup retries once on top of the new remote when its push is rejected', (
   assert.equal(r.pushed, 'direct');
   assert.ok(fs.existsSync(marker));
   assert.match(sh(origin, 'log', '-1', '--format=%s', 'main'), /主表备份/);
+});
+
+test('private evidence is mirrored unredacted, with exclusions and deletions', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-evidence-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const data = trackerData(root);
+  const evidence = path.join(root, 'private');
+  const put = (rel, text = 'x') => {
+    fs.mkdirSync(path.dirname(path.join(evidence, rel)), { recursive: true });
+    fs.writeFileSync(path.join(evidence, rel), text);
+  };
+  // 合成数据
+  put(
+    'applications/job_1/submission-evidence.md',
+    '测评链接 https://exam.example.com/t/abc 原样保留'
+  );
+  put('site-knowledge/example-ats.md', 'notes');
+  put('reassessments/run/__pycache__/x.pyc');
+  put('reassessments/run/result.json', '{}');
+  put('playwright-application/chrome-profile/Cookies', 'secret');
+  put('secrets/key.json', 'secret');
+  put('publication-20260930/wheel/a.py');
+  put('backup-worktree/tracker-backup/job_pool.csv');
+  put('README.md', 'top-level file');
+  put('applications/' + 'd'.repeat(160) + '/f.txt');
+  assert.deepEqual(evidenceFiles(evidence).files.sort(), [
+    'applications/job_1/submission-evidence.md',
+    'reassessments/run/result.json',
+    'site-knowledge/example-ats.md',
+  ]);
+  assert.equal(evidenceFiles(evidence).skipped.length, 1);
+
+  const repo = path.join(root, 'repo'),
+    worktree = path.join(root, 'wt');
+  fs.mkdirSync(repo);
+  sh(repo, 'init', '-q');
+  ident(repo);
+  fs.writeFileSync(path.join(repo, 'README.md'), 'cv');
+  sh(repo, 'add', 'README.md');
+  sh(repo, 'commit', '-q', '-m', 'init');
+
+  const first = backup({ data, repo, worktree, evidence });
+  assert.equal(first.committed, true);
+  assert.equal(first.evidence.files, 3);
+  const tracked = sh(worktree, 'ls-files').trim().split('\n');
+  assert.ok(tracked.includes('private-evidence/applications/job_1/submission-evidence.md'));
+  assert.ok(!tracked.some((f) => /playwright|secrets|publication|backup-worktree|pyc/.test(f)));
+  assert.match(
+    fs.readFileSync(
+      path.join(worktree, 'private-evidence/applications/job_1/submission-evidence.md'),
+      'utf8'
+    ),
+    /exam\.example\.com\/t\/abc/
+  );
+  assert.equal(backup({ data, repo, worktree, evidence }).committed, false);
+
+  fs.rmSync(path.join(evidence, 'site-knowledge'), { recursive: true });
+  put('applications/job_1/submission-evidence.md', 'updated');
+  assert.equal(backup({ data, repo, worktree, evidence }).committed, true);
+  const after = sh(worktree, 'ls-files').trim().split('\n');
+  assert.ok(!after.some((f) => f.startsWith('private-evidence/site-knowledge')));
+  assert.equal(fs.existsSync(path.join(worktree, 'private-evidence/site-knowledge')), false);
+  assert.match(sh(worktree, 'log', '-1', '--format=%s'), /含私有证据/);
 });

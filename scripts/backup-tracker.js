@@ -13,7 +13,13 @@
  * 备份前打码：测评/笔试/面试平台与短链的整条路径、其他链接里的令牌与个人参数、密码和验证码、
  * 考试账号与简历/申请编号、微信/QQ 号、手机号、个人邮箱的用户名、联系人姓名、住址、推荐码，
  * 以及身份证号。打码后再用一套独立的检查扫描，仍检出敏感内容时不写入、不提交。
- * 主表本身不改动。只提交 tracker-backup/ 目录。
+ * 主表本身不改动。
+ *
+ * 同一次提交还把本机私有证据目录（CareerWorkbench/data/private，可用 JOBHUNT_EVIDENCE_DIR 改）
+ * 原样镜像到 private-evidence/：投递证据、站点经验、重评与调研结果等，不打码（lapis-cv 是私有仓库）。
+ * 不镜像：浏览器登录配置（含 Cookie）、密钥、可重新生成的模型/发布/运行/评测产物、备份工作目录本身，
+ * 以及缓存目录和超过 50 MB 的单个文件。源目录里删掉的文件，镜像里也删掉（历史版本仍在 git 里）。
+ * 只提交 tracker-backup/ 和 private-evidence/ 两个目录。
  * 每晚汇总与登录检查（remind.js --all）会在后台调用 --push。
  */
 'use strict';
@@ -30,6 +36,28 @@ const WORKTREE =
   process.env.JOBHUNT_BACKUP_WORKTREE ||
   path.join(ROOT, 'CareerWorkbench/data/private/backup-worktree');
 const SUBDIR = 'tracker-backup';
+const EVIDENCE =
+  process.env.JOBHUNT_EVIDENCE_DIR || path.join(ROOT, 'CareerWorkbench/data/private');
+const EVIDENCE_SUBDIR = 'private-evidence';
+const EVIDENCE_SKIP_TOP = new Set([
+  'playwright-application', // 专用浏览器 profile，含登录 Cookie
+  'secrets',
+  'models',
+  'agent-runs',
+  'eval',
+  'backup-worktree', // 备份工作目录本身
+]);
+const EVIDENCE_SKIP_TOP_RE = /^publication-/;
+const EVIDENCE_SKIP_DIR = new Set([
+  '.git',
+  'node_modules',
+  '__pycache__',
+  'chrome-profile',
+  'validation-deps',
+]);
+const EVIDENCE_MAX_BYTES = 50 * 1024 * 1024;
+// Windows 路径上限 260：镜像路径加上 worktree 前缀不能超限，留出余量
+const EVIDENCE_MAX_REL = 150;
 
 // 全角数字、字母和 ＠＝ 先转成半角，后面的规则只需处理一种写法
 const toHalfWidth = (s) =>
@@ -199,6 +227,58 @@ function findLeaks(text) {
   return kinds;
 }
 
+// 列出要镜像的证据文件（相对路径，/ 分隔）；跳过链接、排除目录、超大文件和超长路径
+function evidenceFiles(src) {
+  const files = [],
+    skipped = [];
+  function walk(dir, rel, top) {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? rel + '/' + e.name : e.name;
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) {
+        if (top && (EVIDENCE_SKIP_TOP.has(e.name) || EVIDENCE_SKIP_TOP_RE.test(e.name))) continue;
+        if (EVIDENCE_SKIP_DIR.has(e.name)) continue;
+        walk(path.join(dir, e.name), r, false);
+      } else if (e.isFile()) {
+        if (top) continue; // 顶层散文件（如 README）不属于证据目录
+        if (/\.pyc$/i.test(e.name)) continue;
+        const size = fs.statSync(path.join(dir, e.name)).size;
+        if (size > EVIDENCE_MAX_BYTES) skipped.push(r + '（超过 50 MB）');
+        else if (r.length > EVIDENCE_MAX_REL) skipped.push(r + '（路径过长）');
+        else files.push(r);
+      }
+    }
+  }
+  walk(src, '', true);
+  return { files, skipped };
+}
+
+// 把 src 下的证据镜像到 dest：内容不同才写，源里已不存在的删除
+function mirrorEvidence(src, dest) {
+  const { files, skipped } = evidenceFiles(src);
+  const keep = new Set(files);
+  for (const r of files) {
+    const from = path.join(src, r),
+      to = path.join(dest, r);
+    const next = fs.readFileSync(from);
+    if (fs.existsSync(to) && fs.readFileSync(to).equals(next)) continue;
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.writeFileSync(to, next);
+  }
+  (function prune(dir, rel) {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? rel + '/' + e.name : e.name,
+        full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        prune(full, r);
+        if (!fs.readdirSync(full).length) fs.rmdirSync(full);
+      } else if (!keep.has(r)) fs.rmSync(full);
+    }
+  })(dest, '');
+  return { files: files.length, skipped };
+}
+
 function git(args, opts = {}) {
   return execFileSync('git', args, {
     cwd: opts.cwd || REPO,
@@ -218,6 +298,7 @@ function backup({
   worktree = WORKTREE,
   push = false,
   proxy = PROXY,
+  evidence = EVIDENCE,
 } = {}) {
   if (!fs.existsSync(path.join(repo, '.git'))) return { skipped: 'backup repo not found: ' + repo };
   const { revision, files } = createStore(data).exportCsv();
@@ -261,6 +342,9 @@ function backup({
       inTree(['reset', '-q', '--hard', base]);
     }
   }
+  const withEvidence = !!evidence && fs.existsSync(evidence);
+  const dirs = withEvidence ? [SUBDIR, EVIDENCE_SUBDIR] : [SUBDIR];
+  let evidenceResult = null;
   function snapshot() {
     const dir = path.join(worktree, SUBDIR);
     fs.mkdirSync(dir, { recursive: true });
@@ -269,16 +353,19 @@ function backup({
       if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== next)
         fs.writeFileSync(target, next, 'utf8');
     }
-    inTree(['add', '--', SUBDIR]);
-    if (!inTree(['diff', '--cached', '--name-only', '--', SUBDIR]).trim()) return false;
+    if (withEvidence)
+      evidenceResult = mirrorEvidence(evidence, path.join(worktree, EVIDENCE_SUBDIR));
+    // -A：镜像里删掉的文件也要进提交
+    inTree(['add', '-A', '--', ...dirs]);
+    if (!inTree(['diff', '--cached', '--name-only', '--', ...dirs]).trim()) return false;
     const day = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
     inTree([
       'commit',
       '-q',
       '-m',
-      `主表备份 ${day}（revision ${revision.slice(0, 12)}）`,
+      `主表备份 ${day}（revision ${revision.slice(0, 12)}）` + (withEvidence ? '，含私有证据' : ''),
       '--',
-      SUBDIR,
+      ...dirs,
     ]);
     return true;
   }
@@ -309,7 +396,7 @@ function backup({
       }
     }
   }
-  return { revision, committed, pushed };
+  return { revision, committed, pushed, evidence: evidenceResult };
 }
 
 if (require.main === module) {
@@ -322,6 +409,10 @@ if (require.main === module) {
     line = r.skipped
       ? '跳过：' + r.skipped
       : `revision ${r.revision.slice(0, 12)}，${r.committed ? '已提交新快照' : '无变化'}` +
+        (r.evidence
+          ? `，证据 ${r.evidence.files} 个文件` +
+            (r.evidence.skipped.length ? `（跳过 ${r.evidence.skipped.length} 个）` : '')
+          : '') +
         (push ? `，推送：${r.pushed}` : '');
   } catch (e) {
     line =
@@ -338,4 +429,4 @@ if (require.main === module) {
   } catch {}
 }
 
-module.exports = { backup, redact, findLeaks, isIdCard };
+module.exports = { backup, redact, findLeaks, isIdCard, evidenceFiles, mirrorEvidence };
