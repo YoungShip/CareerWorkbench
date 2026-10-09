@@ -10,9 +10,10 @@
  * 备份推送后本人那份 lapis-cv 需要 git pull 才能看到新快照。
  *
  * 读取在主表锁内进行，拿到的是一个完整版本，不会备份到写了一半的事务。
- * 备份前打码：测评/笔试/面试平台与短链的整条路径、其他链接里的令牌与个人参数、密码和验证码、
+ * 默认原样备份（2026-10-09 本人确认，lapis-cv 是私有仓库）。设 JOBHUNT_BACKUP_REDACT=1 时备份前打码：
+ * 测评/笔试/面试平台与短链的整条路径、其他链接里的令牌与个人参数、密码和验证码、
  * 考试账号与简历/申请编号、微信/QQ 号、手机号、个人邮箱的用户名、联系人姓名、住址、推荐码，
- * 以及身份证号。打码后再用一套独立的检查扫描，仍检出敏感内容时不写入、不提交。
+ * 以及身份证号；打码后再用一套独立的检查扫描，仍检出敏感内容时不写入、不提交。
  * 主表本身不改动。
  *
  * 同一次提交还把本机私有证据目录（CareerWorkbench/data/private，可用 JOBHUNT_EVIDENCE_DIR 改）
@@ -36,6 +37,8 @@ const WORKTREE =
   process.env.JOBHUNT_BACKUP_WORKTREE ||
   path.join(ROOT, 'CareerWorkbench/data/private/backup-worktree');
 const SUBDIR = 'tracker-backup';
+// 2026-10-09 本人确认主表和证据目录一样原样备份到私有 lapis-cv；JOBHUNT_BACKUP_REDACT=1 恢复打码
+const REDACT_TRACKER = process.env.JOBHUNT_BACKUP_REDACT === '1';
 const EVIDENCE =
   process.env.JOBHUNT_EVIDENCE_DIR || path.join(ROOT, 'CareerWorkbench/data/private');
 const EVIDENCE_SUBDIR = 'private-evidence';
@@ -299,13 +302,17 @@ function backup({
   push = false,
   proxy = PROXY,
   evidence = EVIDENCE,
+  redactTracker = REDACT_TRACKER,
 } = {}) {
   if (!fs.existsSync(path.join(repo, '.git'))) return { skipped: 'backup repo not found: ' + repo };
   const { revision, files } = createStore(data).exportCsv();
-  const redacted = Object.entries(files).map(([name, text]) => [name, redact(text)]);
-  const leaks = redacted.flatMap(([name, next]) =>
-    findLeaks(next).map((kind) => name + ' ' + kind)
-  );
+  const redacted = Object.entries(files).map(([name, text]) => [
+    name,
+    redactTracker ? redact(text) : text,
+  ]);
+  const leaks = redactTracker
+    ? redacted.flatMap(([name, next]) => findLeaks(next).map((kind) => name + ' ' + kind))
+    : [];
   if (leaks.length) throw new Error('打码后仍检出敏感内容，备份未写入：' + leaks.join('；'));
 
   const inRepo = (args) => git(args, { cwd: repo });

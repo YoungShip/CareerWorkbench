@@ -205,7 +205,7 @@ test('backup commits only tracker-backup in its own worktree and leaves the user
   fs.writeFileSync(path.join(repo, 'unrelated.txt'), 'wip');
   sh(repo, 'add', 'unrelated.txt'); // staged work must stay exactly as it is
 
-  const first = backup({ data, repo, worktree });
+  const first = backup({ data, repo, worktree, redactTracker: true });
   assert.equal(first.committed, true);
   const files = sh(worktree, 'show', '--name-only', '--format=', 'HEAD').trim().split('\n');
   assert.ok(
@@ -218,7 +218,13 @@ test('backup commits only tracker-backup in its own worktree and leaves the user
   );
   assert.equal(sh(repo, 'status', '--short'), 'A  unrelated.txt\n');
   assert.equal(fs.existsSync(path.join(repo, 'tracker-backup')), false);
-  assert.equal(backup({ data, repo, worktree }).committed, false);
+  assert.equal(backup({ data, repo, worktree, redactTracker: true }).committed, false);
+  // 默认原样备份：同一份主表不再打码，生成一次新提交
+  assert.equal(backup({ data, repo, worktree }).committed, true);
+  assert.doesNotMatch(
+    fs.readFileSync(path.join(worktree, 'tracker-backup/job_pool.csv'), 'utf8'),
+    /REDACTED/
+  );
 });
 
 test('backup skips quietly when the backup repository is missing', () => {
