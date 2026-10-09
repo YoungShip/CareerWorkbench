@@ -9,13 +9,13 @@
 | 仓库 | 可见性 | 放在 | 内容 |
 |---|---|---|---|
 | `YoungShip/CareerWorkbench` | 公开 | `resume/CareerWorkbench` | 工作流代码、规则、三个技能的版本源 `skills/` |
-| `YoungShip/lapis-cv` | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、主表每日备份 `tracker-backup/` |
+| `YoungShip/yxp-cv`（原 lapis-cv，2026-10-09 改名） | 私有 | `resume/lapis-cv` | 简历、网申母表、求职档案、公司调研、主表每日备份 `tracker-backup/` |
 | `YoungShip/job-application-workflow-skills` | 公开，已归档 | 不需要克隆 | 旧的技能独立仓库，2026-10-07 并入 CareerWorkbench |
 
 ```sh
 mkdir resume && cd resume
 git clone https://github.com/YoungShip/CareerWorkbench.git
-git clone https://github.com/YoungShip/lapis-cv.git
+git clone https://github.com/YoungShip/yxp-cv.git lapis-cv
 cp CareerWorkbench/AGENTS.md AGENTS.md          # 工作区根的规则副本
 cd CareerWorkbench
 npm ci
@@ -53,7 +53,7 @@ node dashboard/tracker-cli.js brief
 
 ## 只连 GitHub 的云端会话
 
-**先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/lapis-cv`：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。有的工具会把访问 GitHub 的请求一律改走它自己的授权，给它个人访问令牌也没用（2026-10 试过 Hark）。这类工具只安排公开仓库的事，不要为了它把 lapis-cv 改成公开：仓库里有家人信息、住址和未用的测评链接，公开后收不回来。Claude Code 云端会话里，lapis-cv 要么事先加进环境的仓库来源，要么由本人在对话中要求添加并批准；由定时任务或自动通知发起的会话没有本人确认，添加私有仓库会被拒绝，这时不要换别的办法绕过，停下来说明需要本人授权。
+**先确认能读私有仓库。** 工具的 GitHub 授权必须包含 `YoungShip/yxp-cv`（原 lapis-cv）：GitHub App 安装时选中这个仓库，或者 OAuth 授权允许访问私有仓库。只能读公开仓库的工具只能改 CareerWorkbench 的代码，做不了秋招业务。有的工具会把访问 GitHub 的请求一律改走它自己的授权，给它个人访问令牌也没用（2026-10 试过 Hark）。这类工具只安排公开仓库的事，不要为了它把 lapis-cv 改成公开：仓库里有家人信息、住址和未用的测评链接，公开后收不回来。Claude Code 云端会话里，lapis-cv 要么事先加进环境的仓库来源，要么由本人在对话中要求添加并批准；由定时任务或自动通知发起的会话没有本人确认，添加私有仓库会被拒绝，这时不要换别的办法绕过，停下来说明需要本人授权。
 
 **搭环境。** 两个仓库克隆到同一个父目录（相当于 `resume/`），按上面的命令安装。Python 测试在仓库根目录运行 `uv run --project agent pytest agent/tests`。要看投递进度时，按上一节从 `tracker-backup/` 恢复主表。
 

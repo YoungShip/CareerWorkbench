@@ -9,7 +9,7 @@
 | 内容 | 位置 |
 |---|---|
 | 本项目 | `resume/CareerWorkbench`（origin = YoungShip/CareerWorkbench） |
-| 简历与母表仓库 | `resume/lapis-cv`（origin = YoungShip/lapis-cv，私有） |
+| 简历与母表仓库 | `resume/lapis-cv`（origin = YoungShip/yxp-cv，私有；2026-10-09 由 lapis-cv 改名，本机文件夹名不变） |
 | 投递主数据（八份 CSV） | `resume/CareerWorkbench/dashboard/` |
 | 选岗规则、经历边界、公司去重索引 | `resume/lapis-cv/秋招/求职档案.md` |
 | 个人资料（网申母表） | `resume/lapis-cv/秋招/网申档案.json` |
