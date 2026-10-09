@@ -20,6 +20,7 @@
 | 2026-10-09 | 现行口径 · 第 0/5/7/8 条 | 本人确认不在手机上看 OfferNotes，进度只由 AI 或电脑查看，同意把 OfferNotes 从工作流彻底移除：删除同步代码、`sync-export`/`sync-ack`、offernotes-sync 技能、网页同步页和 ③B Raw CDP 通道及其本机 profile；`sync_queue` 表和 `offernotes_id` 列保留为历史数据 |
 | 2026-10-09 | 第 13 条 | 本人确认把 `data/private` 里的投递证据、站点经验、重评与调研结果原样每天镜像到私有 `lapis-cv/private-evidence/`（"都私密仓库了"）；起因是这些只存在本机一块硬盘上。浏览器登录配置、密钥和可重新生成的产物不入库 |
 | 2026-10-09 | 第 13 条 | 本人确认主表备份也和证据目录一样原样备份到私有 lapis-cv，取消打码（代码保留，`JOBHUNT_BACKUP_REDACT=1` 可恢复）；起因是证据目录已有原文，主表打码只会让恢复不完整 |
+| 2026-10-09 | 第 13 条 | 本人同意把只在本机的工作资料也原样镜像到私有 `lapis-cv/local-backup/`：公司发现数据、主表引用的 `lapis-cv/tmp` 调研目录、resume 根目录散文件；`私密信息.json` 和其他项目原件不在其中 |
 
 ## 事故与实测
 

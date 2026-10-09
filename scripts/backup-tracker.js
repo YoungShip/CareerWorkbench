@@ -20,7 +20,10 @@
  * 原样镜像到 private-evidence/：投递证据、站点经验、重评与调研结果等，不打码（lapis-cv 是私有仓库）。
  * 不镜像：浏览器登录配置（含 Cookie）、密钥、可重新生成的模型/发布/运行/评测产物、备份工作目录本身，
  * 以及缓存目录和超过 50 MB 的单个文件。源目录里删掉的文件，镜像里也删掉（历史版本仍在 git 里）。
- * 只提交 tracker-backup/ 和 private-evidence/ 两个目录。
+ * 同样原样镜像到 local-backup/ 的还有：公司发现数据（discovery/，JOBHUNT_DISCOVERY_DIR）、主表
+ * matching_file/research_file 引用到的 lapis-cv/tmp 目录（lapis-cv-tmp/，整个 tmp 不镜像），以及 resume
+ * 工作区根目录的散文件（workspace-root/，JOBHUNT_WORKSPACE_DIR；不含 . 开头的配置）。
+ * 只提交 tracker-backup/、private-evidence/ 和 local-backup/ 三个目录。
  * 每晚汇总与登录检查（remind.js --all）会在后台调用 --push。
  */
 'use strict';
@@ -42,6 +45,12 @@ const REDACT_TRACKER = process.env.JOBHUNT_BACKUP_REDACT === '1';
 const EVIDENCE =
   process.env.JOBHUNT_EVIDENCE_DIR || path.join(ROOT, 'CareerWorkbench/data/private');
 const EVIDENCE_SUBDIR = 'private-evidence';
+// 其他只在本机的工作资料，镜像到 local-backup/ 下：公司发现数据、主表引用的 lapis-cv/tmp 调研目录、
+// resume 工作区根目录的散文件（不含 . 开头的配置）
+const LOCAL_SUBDIR = 'local-backup';
+const DISCOVERY =
+  process.env.JOBHUNT_DISCOVERY_DIR || path.join(ROOT, 'CareerWorkbench/data/company-discovery');
+const WORKSPACE = process.env.JOBHUNT_WORKSPACE_DIR || ROOT;
 const EVIDENCE_SKIP_TOP = new Set([
   'playwright-application', // 专用浏览器 profile，含登录 Cookie
   'secrets',
@@ -230,8 +239,9 @@ function findLeaks(text) {
   return kinds;
 }
 
-// 列出要镜像的证据文件（相对路径，/ 分隔）；跳过链接、排除目录、超大文件和超长路径
-function evidenceFiles(src) {
+// 列出 src 下要镜像的文件（相对路径，/ 分隔）；跳过链接、缓存目录、超大文件和超长路径。
+// topDir(name) 决定收哪些顶层目录，topFile(name) 决定收哪些顶层散文件，dirs=false 时不进子目录
+function listFiles(src, { topDir = () => true, topFile = () => false, dirs = true } = {}) {
   const files = [],
     skipped = [];
   function walk(dir, rel, top) {
@@ -239,11 +249,10 @@ function evidenceFiles(src) {
       const r = rel ? rel + '/' + e.name : e.name;
       if (e.isSymbolicLink()) continue;
       if (e.isDirectory()) {
-        if (top && (EVIDENCE_SKIP_TOP.has(e.name) || EVIDENCE_SKIP_TOP_RE.test(e.name))) continue;
-        if (EVIDENCE_SKIP_DIR.has(e.name)) continue;
+        if (!dirs || (top && !topDir(e.name)) || EVIDENCE_SKIP_DIR.has(e.name)) continue;
         walk(path.join(dir, e.name), r, false);
       } else if (e.isFile()) {
-        if (top) continue; // 顶层散文件（如 README）不属于证据目录
+        if (top && !topFile(e.name)) continue;
         if (/\.pyc$/i.test(e.name)) continue;
         const size = fs.statSync(path.join(dir, e.name)).size;
         if (size > EVIDENCE_MAX_BYTES) skipped.push(r + '（超过 50 MB）');
@@ -252,13 +261,29 @@ function evidenceFiles(src) {
       }
     }
   }
-  walk(src, '', true);
+  if (fs.existsSync(src)) walk(src, '', true);
   return { files, skipped };
 }
 
-// 把 src 下的证据镜像到 dest：内容不同才写，源里已不存在的删除
-function mirrorEvidence(src, dest) {
-  const { files, skipped } = evidenceFiles(src);
+// data/private 的证据：顶层散文件（如 README）不属于证据目录
+function evidenceFiles(src) {
+  return listFiles(src, {
+    topDir: (name) => !EVIDENCE_SKIP_TOP.has(name) && !EVIDENCE_SKIP_TOP_RE.test(name),
+  });
+}
+
+// 主表 matching_file / research_file 引用到的 lapis-cv/tmp 顶层条目
+function referencedTmpEntries(jobs) {
+  const names = new Set();
+  for (const job of jobs)
+    for (const key of ['matching_file', 'research_file'])
+      for (const m of String(job[key] || '').matchAll(/lapis-cv[\\/]tmp[\\/]([^\\/\r\n;,]+)/gi))
+        names.add(m[1].trim());
+  return names;
+}
+
+// 把 list 里的文件从 src 镜像到 dest：内容不同才写，不在 list 里的删除
+function mirrorFiles(src, dest, { files, skipped }) {
   const keep = new Set(files);
   for (const r of files) {
     const from = path.join(src, r),
@@ -282,6 +307,10 @@ function mirrorEvidence(src, dest) {
   return { files: files.length, skipped };
 }
 
+function mirrorEvidence(src, dest) {
+  return mirrorFiles(src, dest, evidenceFiles(src));
+}
+
 function git(args, opts = {}) {
   return execFileSync('git', args, {
     cwd: opts.cwd || REPO,
@@ -302,6 +331,9 @@ function backup({
   push = false,
   proxy = PROXY,
   evidence = EVIDENCE,
+  discovery = DISCOVERY,
+  workspace = WORKSPACE,
+  lapisTmp = null, // 默认 <repo>/tmp
   redactTracker = REDACT_TRACKER,
 } = {}) {
   if (!fs.existsSync(path.join(repo, '.git'))) return { skipped: 'backup repo not found: ' + repo };
@@ -350,8 +382,27 @@ function backup({
     }
   }
   const withEvidence = !!evidence && fs.existsSync(evidence);
-  const dirs = withEvidence ? [SUBDIR, EVIDENCE_SUBDIR] : [SUBDIR];
+  const tmpDir = lapisTmp || path.join(repo, 'tmp');
+  const tmpNames = referencedTmpEntries(createStore(data).snapshot().tables.job_pool);
+  // [镜像名, 源目录, 列文件函数]；源不存在的跳过
+  const locals = [
+    ['discovery', discovery, (src) => listFiles(src, { topFile: () => true })],
+    [
+      'lapis-cv-tmp',
+      tmpDir,
+      (src) => listFiles(src, { topDir: (n) => tmpNames.has(n), topFile: (n) => tmpNames.has(n) }),
+    ],
+    [
+      'workspace-root',
+      workspace,
+      (src) => listFiles(src, { topFile: (n) => !n.startsWith('.'), dirs: false }),
+    ],
+  ].filter(([, src]) => src && fs.existsSync(src));
+  const dirs = [SUBDIR];
+  if (withEvidence) dirs.push(EVIDENCE_SUBDIR);
+  if (locals.length) dirs.push(LOCAL_SUBDIR);
   let evidenceResult = null;
+  const localResults = {};
   function snapshot() {
     const dir = path.join(worktree, SUBDIR);
     fs.mkdirSync(dir, { recursive: true });
@@ -362,6 +413,8 @@ function backup({
     }
     if (withEvidence)
       evidenceResult = mirrorEvidence(evidence, path.join(worktree, EVIDENCE_SUBDIR));
+    for (const [name, src, list] of locals)
+      localResults[name] = mirrorFiles(src, path.join(worktree, LOCAL_SUBDIR, name), list(src));
     // -A：镜像里删掉的文件也要进提交
     inTree(['add', '-A', '--', ...dirs]);
     if (!inTree(['diff', '--cached', '--name-only', '--', ...dirs]).trim()) return false;
@@ -403,7 +456,7 @@ function backup({
       }
     }
   }
-  return { revision, committed, pushed, evidence: evidenceResult };
+  return { revision, committed, pushed, evidence: evidenceResult, local: localResults };
 }
 
 if (require.main === module) {
@@ -420,6 +473,12 @@ if (require.main === module) {
           ? `，证据 ${r.evidence.files} 个文件` +
             (r.evidence.skipped.length ? `（跳过 ${r.evidence.skipped.length} 个）` : '')
           : '') +
+        Object.entries(r.local || {})
+          .map(
+            ([name, x]) =>
+              `，${name} ${x.files} 个` + (x.skipped.length ? `（跳过 ${x.skipped.length}）` : '')
+          )
+          .join('') +
         (push ? `，推送：${r.pushed}` : '');
   } catch (e) {
     line =
@@ -436,4 +495,13 @@ if (require.main === module) {
   } catch {}
 }
 
-module.exports = { backup, redact, findLeaks, isIdCard, evidenceFiles, mirrorEvidence };
+module.exports = {
+  backup,
+  redact,
+  findLeaks,
+  isIdCard,
+  evidenceFiles,
+  mirrorEvidence,
+  listFiles,
+  referencedTmpEntries,
+};

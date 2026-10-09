@@ -8,6 +8,8 @@
 
 私有证据：`data/private` 里的投递凭据、材料快照、站点经验、重评与调研结果每天镜像到 `lapis-cv/private-evidence/`，硬盘损坏时从这里拷回 `data/private/` 即可。浏览器登录配置和 `secrets` 不在其中，需要重新登录、重新填写密钥。
 
+本机工作资料：`lapis-cv/local-backup/` 下 `discovery/` 拷回 `CareerWorkbench/data/company-discovery/`，`lapis-cv-tmp/` 拷回 `lapis-cv/tmp/`（主表里的旧 matching 引用即可恢复），`workspace-root/` 拷回 resume 工作区根目录。
+
 ## 恢复演练与手动恢复
 
 1. 先把选定备份的八份 CSV 复制到独立空目录，不覆盖主目录。用 JOBHUNT_DATA_DIR 指向该目录，运行 tracker-cli.js validate 和 snapshot；比较岗位、日志、日程和 ID 与目标时间。

@@ -7,7 +7,16 @@ const { execFileSync } = require('node:child_process');
 const { createStore } = require('../dashboard/store');
 // 默认不镜像本机证据目录；证据镜像单独测试
 process.env.JOBHUNT_EVIDENCE_DIR = path.join(os.tmpdir(), 'cw-no-evidence-' + process.pid);
-const { backup, redact, findLeaks, isIdCard, evidenceFiles } = require('./backup-tracker');
+process.env.JOBHUNT_DISCOVERY_DIR = path.join(os.tmpdir(), 'cw-no-discovery-' + process.pid);
+process.env.JOBHUNT_WORKSPACE_DIR = path.join(os.tmpdir(), 'cw-no-workspace-' + process.pid);
+const {
+  backup,
+  redact,
+  findLeaks,
+  isIdCard,
+  evidenceFiles,
+  referencedTmpEntries,
+} = require('./backup-tracker');
 
 test('redact masks secret URL params and valid ID numbers but keeps job links and IDs', () => {
   const id = '11010519491231002X'; // public GB 11643 sample number
@@ -377,4 +386,69 @@ test('private evidence is mirrored unredacted, with exclusions and deletions', (
   assert.ok(!after.some((f) => f.startsWith('private-evidence/site-knowledge')));
   assert.equal(fs.existsSync(path.join(worktree, 'private-evidence/site-knowledge')), false);
   assert.match(sh(worktree, 'log', '-1', '--format=%s'), /含私有证据/);
+});
+
+test('local-only workspace data is mirrored: discovery, referenced lapis-cv tmp dirs, root files', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-backup-local-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const put = (rel, text = 'x') => {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), text);
+  };
+  // 合成数据
+  const data = trackerData(root, {
+    matching_file: 'D:\\ws\\lapis-cv\\tmp\\acme-20260912\\matching.json',
+    research_file: 'D:/ws/lapis-cv/tmp/report-acme.md',
+  });
+  assert.deepEqual([...referencedTmpEntries(createStore(data).snapshot().tables.job_pool)].sort(), [
+    'acme-20260912',
+    'report-acme.md',
+  ]);
+  put('ws/discovery/leads.json', '[]');
+  put('ws/discovery/runs/r1/log.txt');
+  put('ws/tmp/acme-20260912/matching.json', '{}');
+  put('ws/tmp/acme-20260912/jd/1.txt');
+  put('ws/tmp/report-acme.md');
+  put('ws/tmp/unreferenced-20260901/big.json');
+  put('ws/root/工作日志.md', 'log');
+  put('ws/root/.mcp.json', '{}');
+  put('ws/root/project/src.c');
+
+  const repo = path.join(root, 'repo'),
+    worktree = path.join(root, 'wt');
+  fs.mkdirSync(repo);
+  sh(repo, 'init', '-q');
+  ident(repo);
+  fs.writeFileSync(path.join(repo, 'README.md'), 'cv');
+  sh(repo, 'add', 'README.md');
+  sh(repo, 'commit', '-q', '-m', 'init');
+
+  const opts = {
+    data,
+    repo,
+    worktree,
+    discovery: path.join(root, 'ws/discovery'),
+    lapisTmp: path.join(root, 'ws/tmp'),
+    workspace: path.join(root, 'ws/root'),
+  };
+  const r = backup(opts);
+  assert.equal(r.committed, true);
+  assert.deepEqual(Object.fromEntries(Object.entries(r.local).map(([k, v]) => [k, v.files])), {
+    discovery: 2,
+    'lapis-cv-tmp': 3,
+    'workspace-root': 1,
+  });
+  const tracked = sh(worktree, '-c', 'core.quotepath=false', 'ls-files', 'local-backup')
+    .trim()
+    .split('\n')
+    .sort();
+  assert.deepEqual(tracked, [
+    'local-backup/discovery/leads.json',
+    'local-backup/discovery/runs/r1/log.txt',
+    'local-backup/lapis-cv-tmp/acme-20260912/jd/1.txt',
+    'local-backup/lapis-cv-tmp/acme-20260912/matching.json',
+    'local-backup/lapis-cv-tmp/report-acme.md',
+    'local-backup/workspace-root/工作日志.md',
+  ]);
+  assert.equal(backup(opts).committed, false);
 });
