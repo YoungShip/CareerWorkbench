@@ -13,6 +13,7 @@
 
 ## 现行口径
 
+- **工作流已冻结**（2026-10-09 本人决定：之后专心投递）：除非流程出 bug 或挡住了投递，不再改 CareerWorkbench 和 lapis-cv 的工作流、规则和工具；平时想到的改进只记进 `CareerWorkbench/references/project-backlog.md`，秋招结束后再评估。修 bug 时只做挡路问题所需的最小改动。
 - **投递主数据**：`CareerWorkbench/dashboard/` 的 CSV 是唯一投递主数据。原 Excel 已于 2026-10-09 删除，原有内容保存在 job_pool 的 `legacy_record` 字段，原文件可从 yxp-cv 的 git 历史（提交 00f589a 之前）取回。
 - **OfferNotes 已移出工作流**（2026-10-09 本人决定：实际只由 AI 或电脑查看进度）。同步代码、命令、offernotes-sync 技能和 ③B Raw CDP 通道已删除；主表即最终记录，`sync_queue` 表和 `offernotes_id` 列只保留历史数据。不再打开、登录或修改 OfferNotes。
 - **简历版本**：按岗位方向选标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用。央国企、银行和研究所同样按方向选 A/C，不再维护或选择独立的国企版。历史投递所用的版本、材料快照和日志保留原样；新申请只从母表当前的附件索引取文件。
