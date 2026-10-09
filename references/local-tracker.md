@@ -1,6 +1,6 @@
 # 本机投递主数据（2026-09-13 起）
 
-主目录：`CareerWorkbench/dashboard/`（路径相对工作区根 `resume/`，本机位置见 [local-setup.md](local-setup.md)）。八份 CSV 是唯一投递主数据；Excel 已退役，只保留迁移备份，不再维护。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
+主目录：`CareerWorkbench/dashboard/`（路径相对工作区根 `resume/`，本机位置见 [local-setup.md](local-setup.md)）。八份 CSV 是唯一投递主数据；原 Excel 已于 2026-10-09 删除（内容在 legacy_record 字段，原文件可从 yxp-cv 提交 00f589a 之前的历史取回）。研究报告、matching.json、求职档案和网申母表仍在 lapis-cv，个人事实不搬家。
 
 ## 读取与写入
 
@@ -113,7 +113,7 @@ OfferNotes 线上同步已于 2026-10-09 移除（本人只通过 AI 或电脑�
 
 ## 维护边界
 
-campus-recruitment 继续负责全量目录、完整JD、matching.json校验与选岗；job-application-form-filling 负责代填。调研占用表只管理研究认领，不是第二份申请状态表。Excel只作历史备份/按需导出，不再回写。
+campus-recruitment 继续负责全量目录、完整JD、matching.json校验与选岗；job-application-form-filling 负责代填。调研占用表只管理研究认领，不是第二份申请状态表。不再使用 Excel，也不回写。
 
 campus-recruitment 按任务选择四个入口：新公司全量研究、已有公司增量复核、已选岗位补档、进度维护／查询。新推荐仍须完整 JD、覆盖范围与 matching 校验；补档和状态维护不默认重抓全量目录，也不据此宣称研究缺口已补齐。所有入口的业务写入仍遵循本协议；具体读取范围与升级条件以该 skill 为准。
 

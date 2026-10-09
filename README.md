@@ -108,7 +108,7 @@ Windows 手动打开：dashboard/start-dashboard-silent.bat。登录自启任务
 
 ## 数据与写入
 
-八份 dashboard CSV 是唯一投递主数据，旧 Excel 保留历史用途。不要用表格软件直接修改 CSV。
+八份 dashboard CSV 是唯一投递主数据，旧 Excel 已删除，内容保存在 job_pool 的 legacy_record 字段。不要用表格软件直接修改 CSV。
 
 按稳定 job_id 与整体版本执行 snapshot → preview → apply → read-back。本地读回即完成登记。研究结论、用户选岗、实际提交是不同事实。完整规则见 [主表协议](references/local-tracker.md)。
 
