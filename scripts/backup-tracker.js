@@ -318,6 +318,7 @@ function mirrorEvidence(src, dest) {
 function git(args, opts = {}) {
   return execFileSync('git', args, {
     cwd: opts.cwd || REPO,
+    windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
     timeout: 180000,
