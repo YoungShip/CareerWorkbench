@@ -4,7 +4,8 @@
     M = WorkbenchModel;
   let snapshot = null,
     view = 'overview',
-    loading = false;
+    loading = false,
+    writable = false;
   const el = (tag, text, cls) => {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -66,43 +67,68 @@
     }
     if (values.includes(old)) select.value = old;
   }
+  function displaySnapshot(result) {
+    snapshot = result;
+    $('load-status').hidden = true;
+    $('last-updated').textContent =
+      '最近读取 ' +
+      new Date(result.read_status?.checked_at || Date.now()).toLocaleTimeString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        hour12: false,
+      });
+    $('warnings').replaceChildren();
+    for (const warning of snapshot.warnings || [])
+      $('warnings').append(
+        el(
+          'p',
+          [warning.company, warning.job_title, warning.message].filter(Boolean).join(' · '),
+          'notice todo-warning'
+        )
+      );
+    fillOptions(
+      'job-family',
+      jobs().map((j) => j.role_family),
+      '全部方向'
+    );
+    fillOptions(
+      'job-city',
+      jobs().map((j) => j.location),
+      '全部城市'
+    );
+    renderOverview();
+    renderJobs();
+    renderEvents();
+    $('save-status').textContent = '本地已保存';
+    TodoUI.render(snapshot, openEvent, reload, () => writable);
+  }
   async function reload() {
     if (loading) return;
     loading = true;
+    writable = false;
     $('refresh-btn').disabled = true;
     try {
+      if (!snapshot) {
+        try {
+          const preview = await fetch('/api/snapshot/preview', { cache: 'no-store' });
+          if (preview.status === 200) displaySnapshot(await preview.json());
+        } catch {} // The normal read remains the authoritative path.
+      }
+      $('load-status').hidden = false;
+      $('load-status').classList.remove('error');
+      $('load-status').textContent = snapshot
+        ? '已显示上次读取的副本，正在同步仓库；暂时只读…'
+        : '正在同步并读取工作台…';
+      $('save-status').textContent = '同步中，暂时只读';
       const response = await fetch('/api/snapshot', { cache: 'no-store' }),
         result = await response.json();
       if (!response.ok) throw Error(result.error || '读取失败');
-      snapshot = result;
-      $('load-status').hidden = true;
-      $('last-updated').textContent =
-        '最近读取 ' +
-        new Date().toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
-      $('warnings').replaceChildren();
-      for (const warning of snapshot.warnings || [])
-        $('warnings').append(
-          el(
-            'p',
-            [warning.company, warning.job_title, warning.message].filter(Boolean).join(' · '),
-            'notice todo-warning'
-          )
-        );
-      fillOptions(
-        'job-family',
-        jobs().map((j) => j.role_family),
-        '全部方向'
-      );
-      fillOptions(
-        'job-city',
-        jobs().map((j) => j.location),
-        '全部城市'
-      );
-      renderOverview();
-      renderJobs();
-      renderEvents();
-      $('save-status').textContent = '本地已保存';
-      TodoUI.render(snapshot, openEvent, reload);
+      writable = result.read_status?.state !== 'local-fallback';
+      displaySnapshot(result);
+      if (!writable) {
+        $('load-status').hidden = false;
+        $('load-status').textContent = '仓库同步未完成，当前显示本地副本；请稍后刷新。';
+        $('save-status').textContent = '本地副本，暂时只读';
+      }
     } catch (error) {
       $('load-status').hidden = false;
       $('load-status').classList.add('error');
@@ -364,6 +390,11 @@
     return input;
   }
   function editor(title, build, save) {
+    if (loading || !writable) {
+      $('load-status').hidden = false;
+      $('load-status').textContent = '请先完成仓库同步，再修改记录。';
+      return;
+    }
     const revision = snapshot.revision;
     $('editor-title').textContent = title;
     $('editor-fields').replaceChildren();
@@ -386,6 +417,7 @@
     if (!$('editor-dialog').open) $('editor-dialog').showModal();
   }
   async function post(route, payload) {
+    if (loading || !writable) throw Error('请先完成仓库同步，再保存记录。');
     const response = await fetch(route, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

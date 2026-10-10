@@ -5,10 +5,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const TodoRules = require('./todo');
 const { createTrackerService } = require('../lib/tracker-service');
+const { createSnapshotReader } = require('./snapshot-reader');
 // 与 CLI 同一套主表位置解析；主表在仓库里时读前拉取、写后推送
 const service = createTrackerService({ projectDir: path.resolve(__dirname, '..') });
 const store = service.store;
 const PORT = Number(process.env.JOBHUNT_PORT || 8420);
+const snapshots = createSnapshotReader();
 function send(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -31,8 +33,12 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://' + req.headers.host);
     if (req.method === 'GET' && url.pathname === '/api/health')
       return send(res, 200, { application: 'career-workbench', pid: process.pid, root: __dirname });
+    if (req.method === 'GET' && url.pathname === '/api/snapshot/preview') {
+      const cached = snapshots.preview();
+      return send(res, cached ? 200 : 204, cached);
+    }
     if (req.method === 'GET' && url.pathname === '/api/snapshot')
-      return (service.sync({ strict: false }), send(res, 200, store.snapshot()));
+      return send(res, 200, await snapshots.refresh());
     const assets = {
       '/todo.js': 'application/javascript',
       '/todo-ui.js': 'application/javascript',
@@ -106,9 +112,15 @@ const server = http.createServer(async (req, res) => {
     } else if (url.pathname === '/api/calendar/delete')
       operations = [{ type: 'event.delete', job_id: p.job_id, event_id: p.event_id }];
     else return send(res, 404, { error: 'Not found' });
+    let result;
+    try {
+      result = service.commitPlan({ expected_revision: p.expected_revision, operations });
+    } finally {
+      snapshots.invalidate();
+    }
     return send(res, 200, {
       ok: true,
-      ...service.commitPlan({ expected_revision: p.expected_revision, operations }),
+      ...result,
     });
   } catch (e) {
     send(res, e.httpStatus || 400, { ok: false, error: e.message });
@@ -117,3 +129,4 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () =>
   console.log('CareerWorkbench: http://localhost:' + PORT + '/dashboard.html')
 );
+snapshots.refresh().catch(() => {}); // Warm the memory preview after the required Git read.

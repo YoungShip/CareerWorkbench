@@ -5,7 +5,7 @@
     if (text !== undefined) e.textContent = text;
     return e;
   };
-  function render(s, edit, reload) {
+  function render(s, edit, reload, canWrite = () => true) {
     let host = document.getElementById('todo-home');
     if (!host) {
       host = el('section');
@@ -64,9 +64,13 @@
       row.className = 'form-actions';
       const complete = el('button', '登记完成');
       complete.className = 'btn btn-primary';
-      complete.onclick = () => showCompletion(e, s, card, reload);
+      complete.disabled = !canWrite();
+      complete.onclick = () => {
+        if (canWrite()) showCompletion(e, s, card, reload, canWrite);
+      };
       const change = el('button', '编辑安排');
       change.className = 'btn';
+      change.disabled = !canWrite();
       change.onclick = () => edit(e);
       row.append(complete, change);
       card.append(row);
@@ -95,7 +99,7 @@
     }
     host.append(history);
   }
-  function showCompletion(e, s, card, reload) {
+  function showCompletion(e, s, card, reload, canWrite) {
     if (card.querySelector('form')) return;
     const form = el('form');
     form.className = 'calendar-form';
@@ -155,6 +159,7 @@
       ev.preventDefault();
       save.disabled = true;
       try {
+        if (!canWrite()) throw Error('请先完成仓库同步，再保存记录。');
         const response = await fetch('/api/calendar/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

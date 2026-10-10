@@ -35,6 +35,9 @@ test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events
   const base = 'http://127.0.0.1:' + port;
   const snap = await (await fetch(base + '/api/snapshot')).json();
   assert.equal(snap.tables.job_pool.length, 1);
+  const preview = await (await fetch(base + '/api/snapshot/preview')).json();
+  assert.equal(preview.revision, snap.revision);
+  assert.equal(preview.read_status.preview, true);
   async function post(route, payload, origin) {
     return fetch(base + route, {
       method: 'POST',
@@ -52,6 +55,7 @@ test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events
     stage_status: '1',
   });
   assert.equal(r.status, 200);
+  assert.equal((await fetch(base + '/api/snapshot/preview')).status, 204);
   r = await post('/api/update-status', {
     expected_revision: snap.revision,
     job_id: 'j1',
