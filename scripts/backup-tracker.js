@@ -64,6 +64,7 @@ const EVIDENCE_SKIP_TOP = new Set([
   'agent-runs',
   'eval',
   'backup-worktree', // 备份工作目录本身
+  'tracker-worktree', // Git 主表副本不是证据，不能递归镜像旧备份或凭据
 ]);
 const EVIDENCE_SKIP_TOP_RE = /^publication-/;
 const EVIDENCE_SKIP_DIR = new Set([

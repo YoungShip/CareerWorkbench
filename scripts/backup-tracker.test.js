@@ -346,6 +346,8 @@ test('private evidence is mirrored unredacted, with exclusions and deletions', (
   put('secrets/key.json', 'secret');
   put('publication-20260930/wheel/a.py');
   put('backup-worktree/tracker-backup/job_pool.csv');
+  put('tracker-worktree/local-backup/workspace-extra/secrets/serverchan.json', 'fake-secret');
+  put('tracker-worktree/.git', 'gitdir: fake');
   put('README.md', 'top-level file');
   put('applications/' + 'd'.repeat(160) + '/f.txt');
   assert.deepEqual(evidenceFiles(evidence).files.sort(), [
@@ -369,7 +371,11 @@ test('private evidence is mirrored unredacted, with exclusions and deletions', (
   assert.equal(first.evidence.files, 3);
   const tracked = sh(worktree, 'ls-files').trim().split('\n');
   assert.ok(tracked.includes('private-evidence/applications/job_1/submission-evidence.md'));
-  assert.ok(!tracked.some((f) => /playwright|secrets|publication|backup-worktree|pyc/.test(f)));
+  assert.ok(
+    !tracked.some((f) =>
+      /playwright|secrets|publication|backup-worktree|tracker-worktree|pyc/.test(f)
+    )
+  );
   assert.match(
     fs.readFileSync(
       path.join(worktree, 'private-evidence/applications/job_1/submission-evidence.md'),
