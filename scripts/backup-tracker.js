@@ -24,7 +24,7 @@
  * matching_file/research_file 引用到的 lapis-cv/tmp 目录（lapis-cv-tmp/，整个 tmp 不镜像），以及 resume
  * 工作区根目录的散文件（workspace-root/，JOBHUNT_WORKSPACE_DIR；不含 . 开头的配置）。
  * 只提交 tracker-backup/、private-evidence/ 和 local-backup/ 三个目录。
- * 每晚汇总与登录检查（remind.js --all）会在后台调用 --push。
+ * 独立备份计划任务在每晚 20:00 和登录时调用 --push，不发送通知。
  */
 'use strict';
 const fs = require('node:fs');
@@ -34,10 +34,12 @@ const { createStore } = require('../dashboard/store');
 
 const ROOT = path.resolve(__dirname, '../..');
 // 主表位置与 tracker-cli 一致；主表已在仓库 tracker/ 里时，这份快照只是多一份按天的副本
-const DATA = require('../lib/tracker-git').locate({
+const { locate, createTrackerGit } = require('../lib/tracker-git');
+const LOCATION = locate({
   project: path.join(ROOT, 'CareerWorkbench'),
   workspace: ROOT,
-}).dataDir;
+});
+const DATA = LOCATION.dataDir;
 const REPO = process.env.JOBHUNT_BACKUP_REPO || path.join(ROOT, 'lapis-cv');
 const PROXY = process.env.JOBHUNT_BACKUP_PROXY ?? 'http://127.0.0.1:7890';
 const WORKTREE =
@@ -470,6 +472,9 @@ if (require.main === module) {
   const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
   let line;
   try {
+    // The old reminder launcher refreshed the tracker before spawning backup.
+    // Standalone backups must still fetch current data; fail rather than snapshot stale data.
+    if (LOCATION.git) createTrackerGit(LOCATION.git).refresh({ strict: true });
     const r = backup({ push });
     line = r.skipped
       ? '跳过：' + r.skipped

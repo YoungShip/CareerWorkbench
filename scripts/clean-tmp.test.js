@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { cleanTmp } = require('./clean-tmp');
 
-test('clean-tmp removes only stale scratch files and keeps reminder state', (t) => {
+test('clean-tmp removes only stale scratch files', (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cw-tmp-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const old = (Date.now() - 20 * 86400000) / 1000;
@@ -17,8 +17,6 @@ test('clean-tmp removes only stale scratch files and keeps reminder state', (t) 
   };
   write('old-script.js', true);
   write('fresh-snapshot.json', false);
-  write('remind-state.json', true);
-  write('wechat-quota.json', true);
   write('old-run/a.png', true);
   write('mixed-run/old.json', true);
   write('mixed-run/new.json', false);
@@ -34,12 +32,6 @@ test('clean-tmp removes only stale scratch files and keeps reminder state', (t) 
   assert.equal(left('old-script.js'), false);
   assert.equal(left('old-run'), false);
   assert.equal(left('mixed-run/old.json'), false);
-  for (const rel of [
-    'fresh-snapshot.json',
-    'remind-state.json',
-    'wechat-quota.json',
-    'mixed-run/new.json',
-    'empty-active',
-  ])
+  for (const rel of ['fresh-snapshot.json', 'mixed-run/new.json', 'empty-active'])
     assert.ok(left(rel), rel + ' kept');
 });

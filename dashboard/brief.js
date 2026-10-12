@@ -1,7 +1,7 @@
 /* Read-only action summary. A policy finding is a review request, never a write plan. */
 'use strict';
 const crypto = require('node:crypto');
-const { collectEvents, jobDeadlineEvents } = require('../scripts/reminder-core');
+const { collectEvents, jobDeadlineEvents } = require('./deadlines');
 function currentSection(text, heading = '选岗规则') {
   const lines = String(text)
     .replace(/^\uFEFF/, '')
@@ -51,7 +51,6 @@ function buildBrief(
     limit = 8,
     discovery = null,
     extraWarnings = [],
-    reminderHealth = null,
   } = {}
 ) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
@@ -101,10 +100,6 @@ function buildBrief(
   if (discoveryDeadlines.total)
     nextSteps.push('复核尚未研究但临近截止的公司线索；文本提取日期必须回官方来源确认');
   if (findings.length) nextSteps.push('确认待投规则冲突，不自动取消或提交');
-  if (reminderHealth?.status === 'attention')
-    nextSteps.push(
-      '提醒通道异常：' + reminderHealth.warnings.join('；') + '（见 logs/remind.log）'
-    );
   nextSteps.push('需要详情再按job_id query；写入前snapshot/preview/apply/读回');
   return {
     revision: snapshot.revision,
@@ -121,7 +116,6 @@ function buildBrief(
     overdue_without_action_count: report.overdue.filter((x) => !String(x.next || '').trim()).length,
     time_needs_confirmation: grouped(report.noDeadline),
     discovery_deadlines: discoveryDeadlines,
-    reminder_health: reminderHealth,
     policy: {
       ...active,
       rules: undefined,

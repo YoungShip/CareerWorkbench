@@ -7,7 +7,7 @@
  *   node scripts/clean-tmp.js --days=N   改变过期天数（默认 14）
  *
  * tmp 里主要是 AI 会话留下的一次性脚本、截图和主表快照。最后修改时间早于
- * N 天的文件会被删除；提醒脚本的状态文件不论新旧都保留；不跟随链接或 Junction。
+ * N 天的文件会被删除；不跟随链接或 Junction。
  * 只有原本有内容、且内容全部被删掉的目录才会被移除。不再自动运行：tmp 里有主表和调研报告
  * 引用的证据，删除前先确认没有被引用。
  */
@@ -16,8 +16,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const TMP = path.resolve(__dirname, '../tmp');
-// 提醒脚本的门槛去重、微信额度和发送锁，删掉会导致重复推送或额度失控
-const KEEP = new Set(['remind-state.json', 'wechat-quota.json', 'reminder-delivery.lock']);
 const DAY = 86400000;
 
 function cleanTmp({ dir = TMP, maxAgeDays = 14, now = Date.now(), apply = false } = {}) {
@@ -25,17 +23,17 @@ function cleanTmp({ dir = TMP, maxAgeDays = 14, now = Date.now(), apply = false 
   const stale = [];
   let bytes = 0;
   // 返回目录是否已被清空（原本有内容且全部删除）
-  function walk(d, top) {
+  function walk(d) {
     const entries = fs.readdirSync(d, { withFileTypes: true });
     let kept = 0;
     for (const e of entries) {
       const p = path.join(d, e.name);
-      if ((top && KEEP.has(e.name)) || e.isSymbolicLink()) {
+      if (e.isSymbolicLink()) {
         kept++;
         continue;
       }
       if (e.isDirectory()) {
-        if (walk(p, false) && apply) fs.rmdirSync(p);
+        if (walk(p) && apply) fs.rmdirSync(p);
         else kept++;
         continue;
       }
@@ -48,7 +46,7 @@ function cleanTmp({ dir = TMP, maxAgeDays = 14, now = Date.now(), apply = false 
     }
     return entries.length > 0 && kept === 0;
   }
-  if (fs.existsSync(dir)) walk(dir, true);
+  if (fs.existsSync(dir)) walk(dir);
   return { stale, bytes, removed: apply ? stale.length : 0 };
 }
 
@@ -68,4 +66,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { cleanTmp, KEEP };
+module.exports = { cleanTmp };

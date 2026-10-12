@@ -128,19 +128,9 @@ test('brief lists application deadlines of Pending jobs as urgent', () => {
   assert.equal(item.event, '网申截止（待投岗位）');
 });
 
-test('brief surfaces a broken reminder channel', () => {
-  const { assess } = require('../lib/reminder-health');
-  const health = assess(
-    { last_run_at: '2026-09-20T03:00:00Z', last_wechat_ok_at: '2026-09-18T12:00:00Z' },
-    now
-  );
-  assert.equal(health.status, 'attention');
-  const brief = buildBrief(snap(), { policy, policyText: text, now, reminderHealth: health });
-  assert.match(brief.next_steps.join('\n'), /微信推送已 40 小时没有成功/);
-  assert.equal(assess({}, now).status, 'unknown');
-  assert.equal(
-    assess({ last_run_at: '2026-09-20T03:00:00Z', last_wechat_ok_at: '2026-09-20T02:00:00Z' }, now)
-      .status,
-    'ok'
-  );
+test('brief retains deadlines without retired delivery health', () => {
+  const brief = buildBrief(snap(), { policy, policyText: text, now });
+  assert.equal('reminder_health' in brief, false);
+  assert.ok(brief.urgent);
+  assert.doesNotMatch(brief.next_steps.join(' '), /提醒通道异常/);
 });
