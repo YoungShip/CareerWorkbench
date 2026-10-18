@@ -33,6 +33,31 @@ def material_workspace(tmp_path):
 def codes(report): return {x["code"] for x in report["errors"]}
 
 
+def test_single_resume_accepts_heading_with_role_and_date(material_workspace):
+    w = material_workspace
+    w.data["附件"] = {"简历_唯一": "resume.pdf", "默认投递版本": "唯一主简历"}
+    w.data["_文本来源"] = {"主简历": "resume.md"}
+    w.data["项目经历"][0]["适用版本"] = ["唯一"]
+    (w.root / "resume.md").write_text(
+        "# Candidate\n\n## 项目经历\n### AlphaProject　横向项目｜2026.01 - 至今\n\n- Description\n",
+        encoding="utf-8",
+    )
+    w.save()
+    result = inspect_materials(w.profile, w.project, check_pdf=False)
+    assert result["status"] == "passed"
+    assert result["resumes"][0]["variant"] == "唯一"
+    assert result["resumes"][0]["project_ids"] == ["project_alpha"]
+
+
+def test_single_resume_rejects_old_variant_in_current_attachments(material_workspace):
+    w = material_workspace
+    w.data["附件"]["简历_唯一"] = w.data["附件"]["简历_C"]
+    w.data["_文本来源"]["主简历"] = "resume.md"
+    w.save()
+    report = inspect_materials(w.profile, w.project, check_pdf=False)
+    assert "MULTIPLE_ACTIVE_RESUMES" in codes(report)
+
+
 def test_resume_project_missing_from_master_is_reported(material_workspace):
     w = material_workspace
     w.data["项目经历"] = []

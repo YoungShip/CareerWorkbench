@@ -43,6 +43,8 @@ def project_titles(text: str) -> list[str]:
     titles = []
     for match in re.finditer(r"<h3\b[^>]*>(.*?)</h3>|^###\s+([^\n]+)", "\n".join(block), re.S | re.I | re.M):
         value = markdown_text(match.group(1) or match.group(2)).strip()
+        # 唯一主简历的 Markdown 三级标题可在全角空格后附角色、时间；只用项目名称与母表匹配。
+        value = value.split("\u3000", 1)[0].strip()
         value = re.sub(r"\s+(?:GitHub|源码|代码)\s*$", "", value, flags=re.I)
         titles.append(value)
     return titles
@@ -83,6 +85,8 @@ def inspect_materials(profile_json: Path, project: Path, *, check_pdf=True) -> d
             fail("PROJECT_ALIASES_INVALID", project_id=pid); aliases = []
         for title in [name, *aliases]:
             titles.setdefault(title_key(title), set()).add(pid)
+        if entry.get("是否用于岗位匹配") is False:
+            continue
         group = entry.get("网申文本组") or legacy_groups.get(pid)
         if not group:
             fail("PROJECT_COPYTEXT_GROUP_MISSING", project_id=pid)
@@ -117,8 +121,11 @@ def inspect_materials(profile_json: Path, project: Path, *, check_pdf=True) -> d
         if "国企" in key or "-国企.pdf" in str(value):
             fail("RETIRED_RESUME_SELECTED", attachment=key)
     sources = data.get("_文本来源", {})
-    for variant in ("A", "C"):
-        value = sources.get("原简历" + variant)
+    variants = ("唯一",) if "简历_唯一" in data.get("附件", {}) else ("A", "C")
+    if "唯一" in variants and any(key.startswith("简历_") and key != "简历_唯一" for key in data.get("附件", {})):
+        fail("MULTIPLE_ACTIVE_RESUMES")
+    for variant in variants:
+        value = sources.get("主简历") if variant == "唯一" else sources.get("原简历" + variant)
         if not value:
             if "简历_" + variant in data.get("附件", {}):
                 fail("RESUME_SOURCE_NOT_DECLARED", variant=variant)
@@ -153,7 +160,7 @@ def inspect_materials(profile_json: Path, project: Path, *, check_pdf=True) -> d
             except (ValueError, OSError, PyPdfError): fail("RESUME_PDF_UNREADABLE", variant=variant)
         resume_rows.append(row)
     for entry in projects:
-        if entry.get("适用版本") is not None and not (isinstance(entry["适用版本"], list) and set(entry["适用版本"]) <= {"A", "B", "C"}):
+        if entry.get("适用版本") is not None and not (isinstance(entry["适用版本"], list) and set(entry["适用版本"]) <= {"A", "B", "C", "唯一"}):
             fail("PROJECT_VARIANTS_INVALID", project_id=entry.get("id"))
     # A declared generator output must carry a source/output hash manifest.
     output_names = data.get("_生成管理", {}).get("输出", [])

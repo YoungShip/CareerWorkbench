@@ -142,6 +142,8 @@ def _work(items: list[dict], source: str) -> list[Chunk]:
 def _projects(items: list[dict], source: str) -> list[Chunk]:
     chunks = []
     for p in items:
+        if p.get("是否用于岗位匹配") is False:
+            continue
         pid = str(p.get("id") or "project")
         name = _clean(p.get("名称"))
         owner = p.get("项目归属")
@@ -164,7 +166,8 @@ def _profile_facts(profile: dict, source: str) -> list[Chunk]:
     chunks += _education(profile.get("教育经历") or [], source)
     chunks += _work(profile.get("工作经历") or [], source)
     chunks += _projects(profile.get("项目经历") or [], source)
-    skills = [s for version in ("C", "A") for d in (profile.get("专业技能") or {}).get(version) or [] for s in _sentences(d)]
+    skill_versions = ("唯一",) if "唯一" in (profile.get("专业技能") or {}) else ("C", "A")
+    skills = [s for version in skill_versions for d in (profile.get("专业技能") or {}).get(version) or [] for s in _sentences(d)]
     chunks += [Chunk(f"skill_{n}", "技能", f"[技能] {s}", f"{source}#专业技能") for n, s in enumerate(_dedupe(skills), 1)]
 
     basic = profile.get("基本信息") or {}  # 只取下面两项，其余（联系方式、证件、家庭等）不读
@@ -185,6 +188,8 @@ def _profile_facts(profile: dict, source: str) -> list[Chunk]:
     if awards:
         chunks.append(Chunk("awards", "获奖", f"[获奖] {'；'.join(awards)}", f"{source}#获奖信息"))
     for n, item in enumerate(profile.get("学术成果") or [], start=1):
+        if item.get("是否用于岗位匹配") is False:
+            continue
         if not item.get("名称"):
             continue
         facts = [item.get("状态")]

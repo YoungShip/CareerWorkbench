@@ -5,7 +5,7 @@
 
 面向求职场景的 AI Agent 工程项目：把公司研究、岗位选择、申请准备和进度管理放进同一套可核验的工作流。
 
-本项目源于使用者自行设计的三个 Skill。使用者主导目标、规则、架构与验收，代码由 AI 辅助实现。项目形成过程和各部分归属见 [项目来源](references/project-origin.md)，第三方及历史组件说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+本项目源于使用者提出的公司研究、网申填写与投递记录需求，最初三个 Skill 文档及后续 Agent 技术架构、代码主要由 AI 生成或辅助改造。使用者主要参与需求、范围调整与使用验证，不能将现有实现等同于其独立 Agent/RAG 研发能力。项目形成过程和各部分归属见 [项目来源](references/project-origin.md)，第三方及历史组件说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 从这里了解项目
 

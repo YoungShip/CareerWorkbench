@@ -9,15 +9,14 @@
 
 ## 项目身份
 
-现行项目为 CareerWorkbench（求职工作台），由本人先建立的三个 Skill 工作流发展而来。介绍与归属先读 `CareerWorkbench/references/project-origin.md`：按独立设计、AI 辅助实现、第三方复用分别说明，不能从历史目录名推断整个工作流的来源。简历正文由本人指定的简历助手修改。
+现行项目为 CareerWorkbench（求职工作台），源于本人提出的找岗位、填网申和投递记录三阶段需求，初版 Skill 文本和后续 Agent 技术方案主要由 AI 生成。2026-10-18 本人确认并不掌握底层 Agent/RAG 实现，不以源码存在证明独立研发。介绍与归属先读 `CareerWorkbench/references/project-origin.md`：按独立设计、AI 辅助实现、第三方复用分别说明，不能从历史目录名推断整个工作流的来源。简历正文由本人指定的简历助手修改。
 
 ## 现行口径
 
 - **工作流已冻结**（2026-10-09 本人决定：之后专心投递）：除非流程出 bug 或挡住了投递，不再改 CareerWorkbench 和 lapis-cv 的工作流、规则和工具；平时想到的改进只记进 `CareerWorkbench/references/project-backlog.md`，秋招结束后再评估。修 bug 时只做挡路问题所需的最小改动。
 - **投递主数据**：私有仓库 yxp-cv（本机文件夹 lapis-cv）`tracker/` 下的八份 CSV 是唯一投递主数据（2026-10-09 本人决定从本机 `CareerWorkbench/dashboard/` 迁入，云端和本机都可以读写）。只通过 tracker-cli / MCP / 本地看板读写：它们在专用 worktree `CareerWorkbench/data/private/tracker-worktree` 里读前拉取、写后提交并推送 main；推送冲突时本次写入撤回，按最新主表重新 preview → apply。不要直接改 `lapis-cv/tracker/` 下的文件。原 Excel 已于 2026-10-09 删除，原有内容保存在 job_pool 的 `legacy_record` 字段，原文件可从 yxp-cv 的 git 历史（提交 00f589a 之前）取回。
 - **OfferNotes 已移出工作流**（2026-10-09 本人决定：实际只由 AI 或电脑查看进度）。同步代码、命令、offernotes-sync 技能和 ③B Raw CDP 通道已删除；主表即最终记录，`sync_queue` 表和 `offernotes_id` 列只保留历史数据。不再打开、登录或修改 OfferNotes。
-- **简历版本**：按岗位方向选标准 A（智驾仿真/评测/测试开发）或 C（AI 应用/Agent），B（机器人）完成后再启用。央国企、银行和研究所同样按方向选 A/C，不再维护或选择独立的国企版。历史投递所用的版本、材料快照和日志保留原样；新申请只从母表当前的附件索引取文件。
-- **资料更新闭环**：新增或修改简历中的项目，必须同步母表的结构化项目及对应网申文本组，运行 `lapis-cv/scripts/generate_application_materials.py`，再通过 `jobmatch check-materials`；不能只改 PDF 或自我介绍。候选资料、经历库、回答库和申请规则都是生成视图；资料未同步时，实际匹配要停下并提示修复。旧匹配结果按冻结时的证据版本复核，历史投递不改写。
+- **唯一简历（2026-10-18 本人确认）**：所有新申请统一从私有母表 附件.简历_唯一 读取 lapis-cv 根目录唯一 PDF；唯一源稿为 lapis-cv/简历.md。原 A/C/B 及 Caterpillar 版本全部停用，不再按机器人、智驾、Agent 或企业性质选择不同 PDF。已投递所用文件名、附件快照和申请日志是历史事实，不更改；新申请必须核验附件索引和资料一致性。\n- **资料更新闭环**：新增或修改简历中的项目，必须同步母表的结构化项目及对应网申文本组，运行 `lapis-cv/scripts/generate_application_materials.py`，再通过 `jobmatch check-materials`；不能只改 PDF 或自我介绍。候选资料、经历库、回答库和申请规则都是生成视图；资料未同步时，实际匹配要停下并提示修复。旧匹配结果按冻结时的证据版本复核，历史投递不改写。
 
 ## 0. 硬触发：涉及浏览器或网页时，先读技能再动任何东西
 
