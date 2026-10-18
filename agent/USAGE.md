@@ -53,22 +53,8 @@
 
 ## 5. 复现与诊断
 
-没有个人资料和Key时，先运行公开 [离线演示](DEMO.md)。它的模型响应是预制的，报告不会冒充真实模型成绩。
-
 不调用模型的工程检查：
 
     uv run --frozen python -X utf8 -m pytest -q
 
-真实模型边界检查（公开合成案例，最多十个）：
-
-    uv run jobmatch semantic-check --provider cpa
-
-成对判断质量检查：
-
-    uv run jobmatch semantic-check --suite quality --provider cpa
-
-批次中断后可用 run-status 查看、resume 继续。恢复和失败重试边界见 [RECOVERY.md](RECOVERY.md)；同集质量比较见 [QUALITY.md](QUALITY.md)。
-
-失败会保留在私有报告中。先区分接口/截断、格式/引文、提取遗漏、语义偏差，再决定修复或小范围回归；不通过重复重跑挑成功结果。
-
-历史 50 岗比较见 EVAL.md，对应固定旧版本。新评测池用 eval-pool 创建独立目录，后续命令用同一 --data-dir 指定；不重建已填写的表格，不将兴趣标签当能力标准答案。
+批次中断后用 run-status 查看、resume 继续。失败会保留在私有报告中：先区分接口/截断、格式/引文、提取遗漏、语义偏差，再决定修复；不通过重复重跑挑成功结果。

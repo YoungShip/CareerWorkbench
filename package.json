@@ -1,16 +1,15 @@
 {
   "name": "career-workbench",
   "private": true,
-  "description": "Local job application tracker, discovery CLI and MCP server",
+  "description": "Local job application tracker, dashboard and discovery CLI",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "mcp": "node mcp/server.js",
     "test:setup": "node scripts/setup-test-skills.js",
     "pretest": "node scripts/setup-test-skills.js",
-    "test": "node --test dashboard/*.test.js discovery/*.test.js scripts/*.test.js mcp/*.test.js lib/*.test.js",
+    "test": "node --test dashboard/*.test.js discovery/*.test.js scripts/*.test.js lib/*.test.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "skills:check": "node scripts/skills-sync.js",
@@ -18,9 +17,7 @@
     "skills:install": "node scripts/skills-sync.js --install"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.1",
-    "ws": "^8.21.3",
-    "zod": "^3.25.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "prettier": "3.9.9"

@@ -32,9 +32,8 @@ jobs:
       - name: Public skill bundle checks
         working-directory: CareerWorkbench
         run: |
-          for d in skills docs/skills schemas examples; do "$JOBHUNT_PYTHON" -X utf8 scripts/public-safety-check.py "$d"; done
+          for d in skills schemas; do "$JOBHUNT_PYTHON" -X utf8 scripts/public-safety-check.py "$d"; done
           "$JOBHUNT_PYTHON" -X utf8 scripts/validate-skill-structure.py .
-          "$JOBHUNT_PYTHON" -X utf8 skills/campus-recruitment/scripts/verify-matching.py examples/vla-evidence/matching.json > /dev/null
       - name: Node tests
         working-directory: CareerWorkbench
         run: |
@@ -47,8 +46,3 @@ jobs:
           uv sync --frozen
           uv run --frozen python -X utf8 -m pytest -q
           uv run --frozen python -X utf8 -m pytest -q ../skills/campus-recruitment/scripts
-      - name: Built wheel demo without private files or network
-        working-directory: CareerWorkbench/agent
-        run: |
-          uv build --wheel --offline --out-dir ../tmp/demo-dist
-          uv run --frozen python -X utf8 ../scripts/verify-agent-demo.py --wheel-dir ../tmp/demo-dist --out ../tmp/demo-packaged

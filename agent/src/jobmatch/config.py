@@ -44,10 +44,6 @@ class Paths:
         return self.private / "secrets"
 
     @property
-    def eval_dir(self) -> Path:
-        return self.private / "eval"
-
-    @property
     def runs_dir(self) -> Path:
         return self.private / "agent-runs"
 

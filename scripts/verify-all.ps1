@@ -97,7 +97,7 @@ Invoke-Step 'site knowledge metadata' {
 
 Invoke-Step 'CareerWorkbench node tests' {
   $tests = @(
-    Get-ChildItem (Join-Path $MainRepo 'dashboard'),(Join-Path $MainRepo 'discovery'),(Join-Path $MainRepo 'scripts'),(Join-Path $MainRepo 'mcp'),(Join-Path $MainRepo 'lib') -Filter '*.test.js' -File |
+    Get-ChildItem (Join-Path $MainRepo 'dashboard'),(Join-Path $MainRepo 'discovery'),(Join-Path $MainRepo 'scripts'),(Join-Path $MainRepo 'lib') -Filter '*.test.js' -File |
       ForEach-Object { $_.FullName }
   )
   Invoke-CapturedNative 'node --test' { & node --test @tests }
@@ -105,11 +105,10 @@ Invoke-Step 'CareerWorkbench node tests' {
 
 Invoke-Step 'public skill bundle' {
   $py = (Get-Command python -ErrorAction Stop).Source
-  foreach ($dir in @('skills', 'docs\skills', 'schemas', 'examples')) {
+  foreach ($dir in @('skills', 'schemas')) {
     Invoke-CapturedNative "public-safety-check $dir" { & $py -X utf8 (Join-Path $MainRepo 'scripts\public-safety-check.py') (Join-Path $MainRepo $dir) }
   }
   Invoke-CapturedNative 'validate-skill-structure.py' { & $py -X utf8 (Join-Path $MainRepo 'scripts\validate-skill-structure.py') $MainRepo }
-  Invoke-CapturedNative 'example matching' { & $py -X utf8 (Join-Path $RepoSkills 'campus-recruitment\scripts\verify-matching.py') (Join-Path $MainRepo 'examples\vla-evidence\matching.json') }
 }
 
 Invoke-Step 'CareerWorkbench agent tests' {

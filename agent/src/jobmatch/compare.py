@@ -5,14 +5,21 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import re
+import unicodedata
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .evaluation.pool import company_key
 from .record import write_json
 from .schemas import Extraction, extraction_check
 from .verifier import verify
+
+
+def company_key(name: str | None) -> str:
+    value = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", name or "")).strip().casefold()
+    return re.sub(r"(?<=[\u3400-\u4dbf\u4e00-\u9fff]) (?=[\u3400-\u4dbf\u4e00-\u9fff])", "", value)
+
 
 STATES = {"recommended": "证据支持", "consider": "有可迁移经历", "pending": "有待核对项", "excluded": "存在明确不满足项"}
 CONCLUSIONS = {"satisfied": "满足", "pending": "待核对", "not_satisfied": "不满足"}
