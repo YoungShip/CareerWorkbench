@@ -80,7 +80,11 @@ CareerWorkbench（求职工作台）源于本人提出的找岗位、填网申�
 
 ## 13. 仓库同步
 
-- **及时提交**：经本人确认的工作流改动，在当次会话结束前 `git add <具体文件> → commit → push origin main`。会话开始处理投递任务时顺带 `git status -sb`；发现未提交的改动，先向本人说明再提交。
+- **开工同步**：每次会话开始（在本机，或经 RDC 操作本机时），对 CareerWorkbench 和 lapis-cv 各执行 `git fetch origin main` 和 `git status -sb`：
+  - 没有未提交的改动、也没有未推送的提交时，执行 `git pull --ff-only origin main`。
+  - 有未提交的改动、有未推送的提交，或者快进失败时，不拉取、不合并、不覆盖，只向本人报告是哪个仓库、哪些文件。
+  - 然后在 CareerWorkbench 运行 `npm run skills:check`，技能或三份 AGENTS.md 不一致时先报告。
+- **及时提交**：经本人确认的工作流改动，在当次会话结束前 `git add <具体文件> → commit → push origin main`。
 - **红线**：
   - gitignore 排除的私有数据（`data/*`、`dashboard/*.csv`、`.store`、`tmp`、`logs`、`私密信息.json` 等）永不提交到 CareerWorkbench。主表由 tracker-cli 在 yxp-cv 里自动提交，不手工提交 `tracker/`。
   - 每日备份把八份 CSV 快照到私有 `lapis-cv/tracker-backup/`，把 `data/private` 的证据镜像到 `lapis-cv/private-evidence/`，把只在本机的工作资料镜像到 `lapis-cv/local-backup/`（细节见本机配置）。这些目录只能留在私有仓库。
