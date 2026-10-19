@@ -63,8 +63,8 @@ CareerWorkbench（求职工作台）源于本人提出的找岗位、填网申�
 
 ## 9. 会话摘要与自动备份
 
-- 每个新会话先运行 `node CareerWorkbench/dashboard/tracker-cli.js brief`；有已过期或 72 小时内到期的事项时主动列出。摘要只读，不发通知。
-- 提醒交由 Muse、Hark 和已启用的本机 ClawBot Gateway：遇到需要本人处理的网申接管点（手机号/验证码/CAPTCHA/最终提交）时，调用 `CareerWorkbench/scripts/send-clawbot-notification.ps1`；不重建 Server酱推送、桌面弹窗或其他未授权通道。
+- 每个新会话先运行 `node CareerWorkbench/dashboard/tracker-cli.js brief`；有已过期或 72 小时内到期的事项时主动列出。`brief` 只读；本次任务完成时按下一条发送完成提醒。
+- 提醒交由 Muse、Hark 和已启用的本机 ClawBot Gateway：遇到需要本人处理的网申接管点（手机号/验证码/CAPTCHA/最终提交）时，以及任何任务批次完成时（包括只读查询、调研匹配、表单准备、投递登记、阻塞结束或其他成功完成），都调用 `CareerWorkbench/scripts/send-clawbot-notification.ps1`；不重建 Server酱推送、桌面弹窗或其他未授权通道。正文只发送岗位、步骤和待办，不发送敏感信息；失败按发送器重试，最终失败在对话中报告。
 - Windows 备份任务每日 20:00 和登录时运行 `scripts/backup-tracker.js --push`，配置见 `references/local-setup.md`。
 - 本人确认"没做"的过期事项，按主表协议登记事实，不登记为完成。
 - 凭据不得提交到版本库，不得出现在对外消息或截图中。
