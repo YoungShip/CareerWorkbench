@@ -79,7 +79,7 @@ summary { padding: 12px 0; cursor: pointer; font-weight: 600; }
 }
 .eyebrow { margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1.2px; }
 .topbar .eyebrow { font-size: 12px; letter-spacing: .3px; }
-.header-actions { display: flex; align-items: center; gap: 9px; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 9px; }
 .header-actions .muted { max-width: 115px; font-size: 12px; }
 main { max-width: 1540px; margin: auto; padding: 0 var(--page-gutter) 24px; }
 .btn, .icon-button {
@@ -178,6 +178,9 @@ dialog::backdrop { background: #0c1b2c75; backdrop-filter: blur(2px); }
 .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 15px; margin-bottom: 22px; }
 .dialog-heading h2 { padding-top: 3px; overflow-wrap: anywhere; }
 .form-fields { display: grid; gap: 16px; }
+.model-fields { margin: 0; padding: 0; border: 0; }
+.model-settings-status { margin: 18px 0 10px; overflow-wrap: anywhere; }
+.model-test-note { margin-bottom: 0; font-size: 12px; }
 .form-fields label { display: grid; gap: 7px; color: var(--secondary); font-size: 13px; }
 .form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }

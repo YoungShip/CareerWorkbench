@@ -5,10 +5,44 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
+const http = require('node:http');
 const { createStore } = require('./store');
 test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events', async (t) => {
+  let modelRequest;
+  const upstream = http.createServer(async (req, res) => {
+    let text = '';
+    for await (const chunk of req) text += chunk;
+    modelRequest = {
+      url: req.url,
+      authorization: req.headers.authorization,
+      body: JSON.parse(text),
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({ choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop' }] })
+    );
+  });
+  upstream.listen(0, '127.0.0.1');
+  await once(upstream, 'listening');
+  t.after(() => new Promise((resolve) => upstream.close(resolve)));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobhunt-http-'));
   const store = createStore(dir);
+  const privateDir = path.join(dir, 'private');
+  fs.mkdirSync(path.join(privateDir, 'secrets'), { recursive: true });
+  const modelFile = path.join(privateDir, 'secrets', 'llm.json');
+  fs.writeFileSync(
+    modelFile,
+    JSON.stringify({
+      active: 'cpa',
+      providers: {
+        cpa: {
+          base_url: 'http://127.0.0.1:8317/v1',
+          model: 'fixture-model',
+          api_key: 'fixture-http-secret',
+        },
+      },
+    })
+  );
   store.initialize({
     job_pool: [{ job_id: 'j1', company: 'Example', job_title: 'Test', status: 'Submitted' }],
     application_log: [],
@@ -17,7 +51,13 @@ test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events
   });
   const port = 18429;
   const child = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
-    env: { ...process.env, JOBHUNT_DATA_DIR: dir, JOBHUNT_PORT: String(port) },
+    env: {
+      ...process.env,
+      JOBHUNT_DATA_DIR: dir,
+      JOBHUNT_PORT: String(port),
+      JOBMATCH_PRIVATE_DIR: privateDir,
+      CPA_API_KEY: '',
+    },
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -45,6 +85,45 @@ test('HTTP writes use IDs, reject stale snapshots; calendar retains prior events
       body: JSON.stringify(payload),
     });
   }
+  const settings = await (await fetch(base + '/api/model-settings')).json();
+  assert.equal(settings.providers.cpa.model, 'fixture-model');
+  assert.doesNotMatch(JSON.stringify(settings), /fixture-http-secret/);
+  const modelPayload = {
+    expected_revision: settings.revision,
+    provider: 'cpa',
+    base_url: 'http://127.0.0.1:' + upstream.address().port + '/v1',
+    model: 'fixture-updated',
+    api_key: '',
+  };
+  assert.equal(
+    (await post('/api/model-settings', modelPayload, 'https://untrusted.example')).status,
+    403
+  );
+  const savedSettings = await post('/api/model-settings', modelPayload);
+  assert.equal(savedSettings.status, 200);
+  assert.doesNotMatch(await savedSettings.text(), /fixture-http-secret/);
+  assert.equal(
+    JSON.parse(fs.readFileSync(modelFile, 'utf8')).providers.cpa.api_key,
+    'fixture-http-secret'
+  );
+  const readback = await (await fetch(base + '/api/model-settings')).json();
+  assert.equal(readback.providers.cpa.model, 'fixture-updated');
+  const modelBytes = fs.readFileSync(modelFile, 'utf8');
+  const testedSettings = await post('/api/model-settings/test', {
+    ...modelPayload,
+    expected_revision: readback.revision,
+  });
+  assert.equal(testedSettings.status, 200);
+  assert.equal((await testedSettings.json()).ok, true);
+  assert.equal(modelRequest.url, '/v1/chat/completions');
+  assert.equal(modelRequest.authorization, 'Bearer fixture-http-secret');
+  assert.equal(modelRequest.body.model, 'fixture-updated');
+  assert.equal(fs.readFileSync(modelFile, 'utf8'), modelBytes);
+  assert.equal((await post('/api/model-settings', modelPayload)).status, 409);
+  assert.equal((await post('/api/model-settings/test', modelPayload)).status, 409);
+  assert.equal((await fetch(base + '/model-settings.js')).status, 200);
+  assert.equal((await fetch(base + '/data/private/secrets/llm.json')).status, 404);
+  assert.equal((await (await fetch(base + '/api/snapshot')).json()).revision, snap.revision);
   let r = await post('/api/calendar/add', {
     expected_revision: snap.revision,
     job_id: 'j1',

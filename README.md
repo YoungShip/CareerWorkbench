@@ -34,6 +34,8 @@
 
 本地看板：http://localhost:8420/dashboard.html （只监听 127.0.0.1）。登录自启任务为 CareerWorkbench Dashboard；手动打开 `dashboard/start-dashboard-silent.bat`，查看状态 `node dashboard/serve.js status`，停止 `node dashboard/serve.js stop`。
 
+顶部「模型设置」可切换 jobmatch 的服务、接口地址、模型 ID 和密钥，并用简短示例测试连接。密钥留空保留原值，不会回传到页面；对应环境变量中的密钥仍优先。保存到本机私有 `data/private/secrets/llm.json`，新启动的匹配任务生效；恢复旧批次仍要求原模型配置一致。
+
 简历或项目改动后：同步母表 → 运行资料生成器 → 在 `agent/` 执行 `uv run --frozen jobmatch check-materials`，见 [资料一致性](references/materials-consistency.md)。
 
 ## 测试

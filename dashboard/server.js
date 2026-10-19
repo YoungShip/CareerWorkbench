@@ -6,11 +6,13 @@ const path = require('node:path');
 const TodoRules = require('./todo');
 const { createTrackerService } = require('../lib/tracker-service');
 const { createSnapshotReader } = require('./snapshot-reader');
+const { createLlmSettings } = require('../lib/llm-settings');
 // 与 CLI 同一套主表位置解析；主表在仓库里时读前拉取、写后推送
 const service = createTrackerService({ projectDir: path.resolve(__dirname, '..') });
 const store = service.store;
 const PORT = Number(process.env.JOBHUNT_PORT || 8420);
 const snapshots = createSnapshotReader();
+const modelSettings = createLlmSettings();
 function send(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -33,6 +35,8 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://' + req.headers.host);
     if (req.method === 'GET' && url.pathname === '/api/health')
       return send(res, 200, { application: 'career-workbench', pid: process.pid, root: __dirname });
+    if (req.method === 'GET' && url.pathname === '/api/model-settings')
+      return send(res, 200, modelSettings.view());
     if (req.method === 'GET' && url.pathname === '/api/snapshot/preview') {
       const cached = snapshots.preview();
       return send(res, cached ? 200 : 204, cached);
@@ -43,6 +47,7 @@ const server = http.createServer(async (req, res) => {
       '/todo.js': 'application/javascript',
       '/todo-ui.js': 'application/javascript',
       '/workbench.js': 'application/javascript',
+      '/model-settings.js': 'application/javascript',
       '/workbench-model.js': 'application/javascript',
       '/workbench.css': 'text/css',
     };
@@ -71,6 +76,9 @@ const server = http.createServer(async (req, res) => {
     )
       return send(res, 403, { error: 'Cross-origin write denied' });
     const p = await body(req);
+    if (url.pathname === '/api/model-settings') return send(res, 200, modelSettings.save(p));
+    if (url.pathname === '/api/model-settings/test')
+      return send(res, 200, await modelSettings.test(p));
     let operations;
     if (url.pathname === '/api/calendar/complete') {
       const snapshot = store.snapshot();
