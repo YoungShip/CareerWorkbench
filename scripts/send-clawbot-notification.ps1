@@ -37,10 +37,22 @@ if (-not $notifyToken) {
 $body = @{ content = $Content } | ConvertTo-Json -Compress
 $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
 $sendHeaders = @{ Authorization = "Bearer $($notifyToken.token)" }
-$result = Invoke-RestMethod -Method Post -Uri "$gatewayBaseUrl/api/v1/notify/send" -Headers $sendHeaders -ContentType 'application/json; charset=utf-8' -Body $bodyBytes
-
-if (-not $result.success) {
-  throw 'ClawBot notification was not accepted'
+$maxAttempts = 3
+$lastError = $null
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+  try {
+    $result = Invoke-RestMethod -Method Post -Uri "$gatewayBaseUrl/api/v1/notify/send" -Headers $sendHeaders -ContentType 'application/json; charset=utf-8' -Body $bodyBytes
+    if (-not $result.success) {
+      throw 'ClawBot notification was not accepted'
+    }
+    Write-Output 'sent'
+    return
+  } catch {
+    $lastError = $_
+    if ($attempt -lt $maxAttempts) {
+      Start-Sleep -Seconds ([Math]::Min(4, [Math]::Pow(2, $attempt - 1)))
+    }
+  }
 }
 
-Write-Output 'sent'
+throw $lastError
