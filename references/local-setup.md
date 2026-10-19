@@ -34,7 +34,9 @@
 
 ## 会话摘要与自动备份
 
-2026-10-13 本人确认取消微信推送和 Windows 桌面通知；Server酱服务已由本人关闭。提醒交由 Muse 和 Hark，本项目不配置新的外部通道。
+2026-10-13 本人确认取消 Windows 桌面通知；Server酱服务已由本人关闭。2026-10-20 本人授权启用本机 ClawBot Gateway 微信提醒，提醒由 Muse、Hark 和 ClawBot 协作；不配置其他外部通道。
+
+**ClawBot Gateway**：本机运行目录为 `%LOCALAPPDATA%\ClawBotGateway\runtime`，管理端口为 `127.0.0.1:6798`，微信账号绑定和通知 Token 保存在该目录对应的本机私有数据库中。发送器为 `CareerWorkbench/scripts/send-clawbot-notification.ps1`；只发送岗位、步骤和待办，不发送手机号、验证码、密码、Cookie 或 Token。网关不可用时提醒失败不应阻断网申流程。
 
 **会话摘要**：`node CareerWorkbench/dashboard/tracker-cli.js brief`，只读主表，不发送通知；失败时排查 tracker-cli，不恢复旧提醒程序。
 
