@@ -36,12 +36,19 @@ metadata:
 1. **查重与范围**：核对公司主体、招聘批次、城市、届别、校招/社招/实习、历史投递和公司级额度。
 2. **定位官方入口**：对多品牌集团或多个招聘主体分别核实入口、额度和流转关系，不能套用另一个主体的规则。
 3. **获取全量目录**：按 `references/data-acquisition.md` 选择 API、页面或浏览器路径，保存原始快照，翻到最后一页并记录总数。
-4. **强制核查门**：逐岗判断届别、招聘性质、城市、硬门槛、额度、投后修改/撤回、截止日和面试形式。未知就标未知，不猜。
-5. **逐岗读 JD**：对所有范围内岗位完整阅读职责和要求；在共享 `jd_source` 中保存岗位 ID、来源 URL、读取时间、本地正文快照和可定位原文引文。
+4. **先筛必要条件，再调用匹配模型**：按现行规则核对地域、招聘性质、届别、学历、专业、英语等必要条件，并核对适用的单位总公告；不能只看岗位卡片。明确不符的保存官方引文、候选人证据及排除理由，停止能力深配，不给虚构等级或匹配度。条件不明则列为待核，不猜着排除；“优先”不升级为“必须”，也不擅自收紧用户允许的未知条件。方向筛除须有职责和现行偏好依据，不能只凭标题或关键词。
+5. **候选逐岗读完整 JD**：对初筛后仍可能适合的岗位完整阅读职责和要求；在共享 `jd_source` 中保存岗位 ID、来源 URL、读取时间、本地正文快照和可定位原文引文。已被明确必要条件排除的岗位只保留充分的资格排除证据，不声称做过职责能力匹配。额度、投后修改/撤回、截止日和面试形式另行核查，未知就标未知，不用模型猜。
 6. **映射候选人证据**：每条要求写入 `requirements[]`，明确 `hard_qualification`/`core_capability`/`plus`/`ambiguous` 类别、JD 引文 ID、候选人档案版本与证据 ID、`direct_support`/`transferable`/`no_evidence`/`conflict` 支持关系，以及 `satisfied`/`not_satisfied`/`pending` 结论。无证据不能写成满足；语义不明确不能升级为硬门槛。
 7. **由逐项结果汇总**：计算 `requirement_summary`，再生成 `decision`；`core_total` 固定等于 `hard_qualification + core_capability`，不包含 `plus` 或 `ambiguous`。每组计数都必须从 `requirements[]` 逐项统计，不能先写 S/A/B/C 或自由百分比再补理由。S/A/B/C 仅是可选辅助标签，规则见 `references/matching-record.md`。
 8. **验证再报告**：模型输出必须先原样保存为 UTF-8 raw JSON，再通过 `scripts/run-matching-pipeline.py --raw <raw.json> --run-dir <new-run-dir>`。该入口只从合法 `requirements[]` 派生 `requirement_summary`，保留 raw、组装结果、字段差异和诊断，然后调用当前 `scripts/verify-matching.py`。正式消费者只读取组装并校验后的记录及 `checks`/`readiness`；不能继续把 raw 当作最终记录。`pipeline-result.json.execution_status=completed` 只表示流程已执行完，必须另外读取 `verification_status`、`readiness_status`、`mechanical_passed` 和内层报告；不能把兼容字段 `status=completed` 当成验证通过。非零报告仍可包含已核实单岗，不能直接宣称全量完成。
-9. **输出可决策结论 + 直观展示层**：正式 pipeline 额外生成 human-summary.json。向用户报告时，每个范围内岗位必须同时展示 **S/A/B/C、证据匹配度区间（明确标注“非录用率”）、decision、是否可登记和关键缺口**；不能只返回 recommended/consider/pending。等级/匹配度只用于快速阅读，登记许可仍只认逐项 requirements、checks 和 readiness。给出首选、替代、排除清单、影响选择的规则、未核事实和需要用户确认的岗位。
+9. **输出可决策结论 + 直观展示层**：正式 pipeline 额外生成 human-summary.json。向用户报告时，完成能力匹配的范围内岗位必须同时展示 **S/A/B/C、证据匹配度区间（明确标注“非录用率”）、decision、是否可登记和关键缺口**；不能只返回 recommended/consider/pending。等级/匹配度只用于快速阅读，登记许可仍只认逐项 requirements、checks 和 readiness。给出首选、替代、排除清单、影响选择的规则、未核事实和需要用户确认的岗位。
+
+### 覆盖与执行检查
+
+- 模型调用前，按稳定 ID 保存初筛台账：范围外、范围内必要条件排除、待核、进入深配，四类互斥且合计等于总目录。每项筛除须有依据；资格不满足不能偷换成研究范围外，范围内排除记录仍按 [matching-record.md](references/matching-record.md) 校验。
+- **全量覆盖不等于每岗都调用模型**：总目录、排除台账、待核清单与候选匹配结果共同对账。直接排除项的等级/匹配度写“不适用”，待核或执行失败项不得伪造分数；不存在符合必要条件的岗位时交付资格筛查结果，不空跑能力匹配。
+- 独立匹配任务的并发与失败续跑按 [agent-adapter.md](references/agent-adapter.md) 执行；不能重复处理同一岗位，不能把 HTTP 成功当作证据校验通过。
+- 临近截止时先交付已核实候选、未完成范围及截止风险，不等全量跑完才提醒。是否提前填报仍由用户决定；用户要求等全量结果时照办，不以赶截止为由跳过校验或扩大授权。
 
 关键词搜索可以定位岗位，但不能证明全量覆盖；如果不得不使用关键词，`coverage.capture_status` 使用 `partial` 或 `unknown`，明确写“非全量，可能遗漏”。原始目录 ID 提取必须在 `raw_catalog` 中显式声明，无法提取时保持覆盖待核验，不得按标题猜身份。
 

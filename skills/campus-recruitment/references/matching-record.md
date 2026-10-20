@@ -73,13 +73,19 @@ positions[]
 `catalog_index[]` 每个条目必填非空 `id`、`title` 和布尔 `in_scope`；可选 `city`、`url`，必须是字符串。`in_scope=false` 的条目必须写非空字符串 `exclusion`，说明为什么不在本次研究范围（例如“实习岗”“地点不在江浙沪”“博士专项”），否则报 `CATALOG_SCOPE_REASON_MISSING`：
 
 ```json
-{"id": "role-2", "title": "算法实习生", "city": "上海", "in_scope": false, "exclusion": "实习岗，不在本次校招范围"}
+{
+  "id": "role-2",
+  "title": "算法实习生",
+  "city": "上海",
+  "in_scope": false,
+  "exclusion": "实习岗，不在本次校招范围"
+}
 ```
 
-两个排除字段不要混用：`catalog_index[].exclusion` 是读 JD 之前的范围筛选理由；`positions[].exclusion_reason` 是范围内岗位读完 JD 后的排除依据。
+两个排除字段不要混用：`catalog_index[].exclusion` 是范围筛选理由；`positions[].exclusion_reason` 是范围内岗位核对适用要求后的排除依据。
 
 - `catalog_index[].in_scope` 表示岗位是否属于本次研究范围，不表示候选人是否适合。
-- 范围内岗位可以在完整要求核对后 `excluded=true`，但必须写 `exclusion_reason`；例如明确硬条件不满足或用户偏好排除。
+- 范围内岗位可以在适用排除条件核实后 `excluded=true`，但必须写 `exclusion_reason` 且 `decision.state=excluded`。明确必要条件不满足时，保留单位公告/岗位资格原文、适用主体、候选人证据和对应 `hard_qualification` 判断即可停止能力深配；不能由此声称读完未取得的职责正文或完成能力评估。条件不明、仅属优先项或缺乏排除依据时，不得直接排除。
 - 范围外岗位若保留解释记录，必须 `excluded=true` 且 `decision.state=not_applicable`，不得计入有效匹配或推荐。
 - 范围内未排除岗位的 `decision.state` 为 `recommended`、`consider` 或 `pending`；决策必须由逐项 `requirements` 汇总产生。
 - 汇总中的 `recommended`、`pending`、`excluded` 计数只统计范围内岗位；范围外解释记录只能单独展示，不能进入有效匹配、推荐或主表登记条件。
@@ -99,7 +105,7 @@ positions[]
       {
         "id": "jd-r1",
         "text": "独立完成 VLA 训练。",
-        "locator": {"line_start": 1, "line_end": 1}
+        "locator": { "line_start": 1, "line_end": 1 }
       }
     ]
   },
@@ -110,7 +116,7 @@ positions[]
       {
         "id": "ev-r1",
         "text": "运行开源 VLA 推理。",
-        "locator": {"line_start": 1, "line_end": 1}
+        "locator": { "line_start": 1, "line_end": 1 }
       }
     ]
   }
@@ -241,10 +247,12 @@ Here `core_total=3` is `1` hard qualification plus `2` core capabilities; the on
 多要求组合按以下优先级处理：先检查硬资格；硬资格 `pending/not_satisfied` 时不能 `recommended/consider`。再检查核心要求：任一核心 `not_satisfied` 或 `conflict` 时，`pending` 可以如实保存但不可登记，`consider`/`recommended` 均阻断；只有硬资格已满足、核心缺口全部是 `transferable + pending` 时，才允许 `consider` 进入用户复核后的尝试性登记。`no_evidence` 或 `conflict` 不能被另一项可迁移证据抵消。
 
 S/A/B/C 不作为 raw semantic record 的许可字段，但**用户可读报告必须生成派生等级与证据匹配度**。derive_matching_display.py 从已核实 requirements[] 确定性计算：
+
 - 权重：hard_qualification/core_capability=3，plus/ambiguous=1；
 - 单项证据系数：direct_support+satisfied=1.0、direct_support+pending=0.75、transferable+pending=0.55、conflict+pending=0.25、conflict+not_satisfied=0、no_evidence+pending=0；
 - 得分只表示**证据匹配度，不是录用率**，对外以 5% 区间显示；
-- excluded=true 的岗位展示等级固定为 C；S 仅限 recommended 且硬/核心全满足；A/B 再按得分和硬/核心失败门确定。
+- excluded=true 的机器派生等级固定为 C；仅作必要资格排除、未做能力深配时，用户报告写“不适用（资格排除）”，保留机器原值供追溯，不把兼容输出 C 解读成能力差。S 仅限 recommended 且硬/核心全满足；A/B 再按得分和硬/核心失败门确定。
+
 派生等级和区间可写入主表 match_grade/match_estimate 方便阅读，但**不能反向修改 decision，也不能绕过 readiness 登记门**。
 
 ## 7. Report semantics
