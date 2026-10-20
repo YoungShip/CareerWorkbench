@@ -86,7 +86,7 @@ application_log.log_id、follow_up.event_id 固定；两表都以 job_id 关联�
 | status | 意义 |
 |---|---|
 | Pending | 已选定待投 |
-| Deferred | 明确延后（例如等B版） |
+| Deferred | 明确延后（例如等本人确认或官方开放） |
 | Needs user | 状态未知/待确认 |
 | Blocked | 操作卡点 |
 | Submitted | 确认已提交，仍在招聘流程中 |
