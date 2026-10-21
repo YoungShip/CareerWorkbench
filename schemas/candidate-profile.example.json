@@ -18,8 +18,7 @@
   "projects": [],
   "language": [],
   "attachments": {
-    "resumeA": "private/path/to/resume-a.pdf",
-    "resumeC": "private/path/to/resume-c.pdf"
+    "resume": "private/path/to/resume.pdf"
   },
   "preferences": {
     "city": [],

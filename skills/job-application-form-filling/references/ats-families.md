@@ -22,7 +22,7 @@ education[]: school, start, end, major, degree, fullTime, lab, research
 work[]: company, start, end, title, description
 projects[]: name, start, end, role, description, link
 language[]: type, proficiency
-attachments: resumeA, resumeC, other approved versions
+attachments: resume (the current single main resume), photo, other approved files
 preferences: city, salary, interview, availability
 ```
 
